@@ -11,6 +11,7 @@ services:
     volumes:
       - mariadb_data:/var/lib/mysql
       - ./init_scripts:/docker-entrypoint-initdb.d
+
   #FastAPI
   backend:
     build: ./backend
