@@ -14,21 +14,8 @@ DB_CONFIG = {
     "cursorclass": aiomysql.DictCursor
 }
 
-pool = None
-
-
-async def init_db_pool():
-    global pool
-    pool = await aiomysql.create_pool(**DB_CONFIG, minsize=1, maxsize=10)
-
-
-async def close_db_pool():
-    if pool:
-        pool.close()
-        await pool.wait_closed()
-
-
-# Проверка статуса (для деплоя)
+async def db_health():
+    """Проверка, что бэкенд жив и видит базу."""
 async def health():
     if not pool: return {"database": "error: pool not initialized"}
     try:
