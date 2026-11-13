@@ -20,7 +20,7 @@
 
 ##  Наш технологический стек
 
-* **Frontend:** HTML, JavaScript 
+* **Frontend:** HTML
 * **Backend:** Python
 * **DevOps & Infrastructure:** Docker, Docker Compose
 * **Database:** MariaDB
