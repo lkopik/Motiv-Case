@@ -9,7 +9,6 @@ cd "$(dirname "$0")/.." || exit 1
 
 log() { echo "[$(date +%H:%M:%S)] $*"; }
 
-# IP ноутбука в сети Wi-Fi; имя интерфейса можно переопределить: IFACE=wlp2s0 bash deploy/autoupdate.sh
 IFACE=${IFACE:-wlan0}
 host_ip() {
     ip -4 -o addr show "$IFACE" 2>/dev/null | awk '{print $4}' | cut -d/ -f1 | head -1 | grep . \
