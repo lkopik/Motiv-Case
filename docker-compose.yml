@@ -1,7 +1,7 @@
 services:
   #MariaDB
   db:
-    image: mariadb:10.11
+    image: mariadb:10.1
     restart: always
     environment:
       MYSQL_ROOT_PASSWORD: motivchik_qwe
