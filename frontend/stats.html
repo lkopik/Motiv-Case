@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Статистика — МОТИВ · Веб-отчётность</title>
+    <link rel="icon" href="favicon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="style.css?v=5">
+    <script src="app.js?v=5"></script>
+</head>
+<body class="app">
+    <main class="page">
+        <div class="page-head">
+            <div>
+                <h1>Статистика</h1>
+                <div class="page-sub">Где и почему сеть простаивает: по техцентрам, типам аварий и дням</div>
+            </div>
+            <div class="actions">
+                <div class="quick" id="quick" style="display:inline-flex">
+                    <button data-d="1">Сутки</button><button data-d="7">7 дней</button>
+                    <button data-d="30">30 дней</button><button data-d="0">Всё</button>
+                </div>
+            </div>
+        </div>
+
+        <section class="kpis">
+            <div class="kpi"><span>Аварий за период</span><b id="k-total">—</b><small id="k-total-sub"></small></div>
+            <div class="kpi"><span>Не закрыто (НВ)</span><b id="k-open" class="red">—</b><small>на текущий момент</small></div>
+            <div class="kpi"><span>Общий простой БС</span><b id="k-prostoy">—</b><small id="k-prostoy-sub"></small></div>
+            <div class="kpi"><span>Средняя длительность</span><b id="k-avg">—</b><small>по закрытым авариям</small></div>
+            <div class="kpi"><span>Затронуто БС</span><b id="k-bs">—</b><small>сумма по авариям</small></div>
+        </section>
+
+        <section class="panel" style="margin-top:20px">
+            <div class="panel-head"><div class="panel-title">Аварии по дням</div></div>
+            <div class="days" id="days"></div>
+            <div class="days-axis" id="days-axis"></div>
+        </section>
+
+        <div class="grid-2">
+            <section class="panel"><div class="panel-head"><div class="panel-title">По техцентрам <small>аварии · простой</small></div></div><div class="bars" id="by-tehc"></div></section>
+            <section class="panel"><div class="panel-head"><div class="panel-title">По типам <small>аварии · простой</small></div></div><div class="bars" id="by-type"></div></section>
+            <section class="panel"><div class="panel-head"><div class="panel-title">По направлениям <small>аварии · простой</small></div></div><div class="bars" id="by-napr"></div></section>
+        </div>
+    </main>
+
+    <script>
+        var M = Motiv, session = M.initPage('stats.html');
+
+        function bars(id, rows) {
+            var max = Math.max.apply(null, rows.map(function (r) { return r.cnt; }).concat([1]));
+            document.getElementById(id).innerHTML = rows.length ? rows.map(function (r) {
+                return '<div class="bar-row"><span class="nowrap">' + M.esc(r.name || 'не указан') + '</span>' +
+                    '<div class="track"><i style="width:' + (r.cnt / max * 100) + '%"></i></div>' +
+                    '<span class="val">' + r.cnt + '</span><span class="sub">' + M.fmtDuration(r.prostoy_sec) + '</span></div>';
+            }).join('') : '<div class="empty">Нет данных</div>';
+        }
+
+        function days(rows, from) {
+            var map = {};
+            rows.forEach(function (r) { map[r.day] = r.cnt; });
+            var start = from ? M.parseLocal(from + 'T00:00') : (rows.length ? M.parseLocal(rows[0].day + 'T00:00') : new Date());
+            var list = [], d = new Date(start), today = new Date();
+            while (d <= today && list.length < 92) { list.push(M.isoDate(d)); d.setDate(d.getDate() + 1); }
+            var max = Math.max.apply(null, list.map(function (k) { return map[k] || 0; }).concat([1]));
+            document.getElementById('days').innerHTML = list.map(function (k) {
+                var c = map[k] || 0;
+                return '<div class="d" title="' + k.split('-').reverse().join('.') + ': ' + c + '"><i style="height:' + (c / max * 100) + '%"></i></div>';
+            }).join('');
+            var step = Math.max(1, Math.ceil(list.length / 10));
+            document.getElementById('days-axis').innerHTML = list.map(function (k, i) {
+                return '<span>' + (i % step === 0 ? k.slice(8) + '.' + k.slice(5, 7) : '') + '</span>';
+            }).join('');
+        }
+
+        function load(daysBack) {
+            Array.prototype.forEach.call(document.querySelectorAll('#quick button'), function (b) {
+                b.className = b.getAttribute('data-d') === String(daysBack) ? 'active' : '';
+            });
+            var from = '';
+            if (daysBack) { var d = new Date(); d.setDate(d.getDate() - daysBack + 1); from = M.isoDate(d); }
+            M.api('GET', '/stats' + (from ? '?date_from=' + from : '')).then(function (s) {
+                var t = s.summary;
+                document.getElementById('k-total').textContent = Math.round(t.total);
+                document.getElementById('k-total-sub').textContent = from ? 'с ' + from.split('-').reverse().join('.') : 'за всё время';
+                document.getElementById('k-open').textContent = Math.round(t.open || 0);
+                document.getElementById('k-prostoy').textContent = M.fmtDuration(t.prostoy_sec);
+                document.getElementById('k-prostoy-sub').textContent = Math.round(t.prostoy_sec / 3600) + ' БС·ч';
+                document.getElementById('k-avg').textContent = M.fmtDuration(t.avg_sec);
+                document.getElementById('k-bs').textContent = Math.round(t.bs);
+                bars('by-tehc', s.by_tehc); bars('by-type', s.by_type); bars('by-napr', s.by_napr);
+                days(s.by_day, from);
+            }).catch(function (e) { M.toast(e.message, 'error'); });
+        }
+
+        if (session) {
+            Array.prototype.forEach.call(document.querySelectorAll('#quick button'), function (b) {
+                b.onclick = function () { load(parseInt(b.getAttribute('data-d'), 10)); };
+            });
+            load(30);
+        }
+    </script>
+</body>
+</html>

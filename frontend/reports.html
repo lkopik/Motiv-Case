@@ -2,169 +2,195 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>МОТИВ - Отчетность</title>
-    <link rel="stylesheet" href="style.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Отчётность — МОТИВ · Веб-отчётность</title>
+    <link rel="icon" href="favicon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="style.css?v=5">
+    <script src="app.js?v=5"></script>
+    <script src="form.js?v=5"></script>
 </head>
-<body style="display: none;">
-
-    <nav class="navbar">
-        <div class="nav-logo">МОТИВ</div>
-        <div class="nav-user">
-            <span id="user-name">-</span>
-            <button class="btn btn-secondary" onclick="logout()">Выход</button>
-        </div>
-    </nav>
-
-    <div class="layout">
-        <aside class="sidebar">
-            <a href="index.html">Аварии</a>
-            <a href="reports.html" class="active">Отчетность</a>
-        </aside>
-
-        <main class="main-content">
-            <div class="page-title">Отчетность по авариям</div>
-
-            <div style="margin-bottom: 15px; display: flex; flex-wrap: wrap;">
-                <div style="margin-right: 15px;">
-                    <label style="margin-right: 5px;">С:</label>
-                    <input type="date" id="filterStart">
-                </div>
-                <div style="margin-right: 15px;">
-                    <label style="margin-right: 5px;">По:</label>
-                    <input type="date" id="filterEnd">
-                </div>
-                <button class="btn" onclick="filterTable()">Применить</button>
-                <button class="btn btn-secondary" onclick="exportCSV()" style="margin-left: 10px;">Выгрузить CSV</button>
+<body class="app">
+    <main class="page">
+        <div class="page-head">
+            <div>
+                <h1>Отчётность</h1>
+                <div class="page-sub" id="sub">События за выбранный период. Нажмите на строку, чтобы открыть аварию.</div>
             </div>
+            <div class="actions">
+                <button class="btn btn-primary" id="csv">Выгрузить CSV</button>
+            </div>
+        </div>
 
-            <div class="table-container">
-                <table id="alarmsTable">
-                    <thead>
-                        <tr>
-                            <th>PW</th>
-                            <th>Напр.</th>
-                            <th>ТЦ</th>
-                            <th>Кат.</th>
-                            <th>Тип сети</th>
-                            <th>Сетевой элемент</th>
-                            <th>Кол-во БС</th>
-                            <th>Тип аварии</th>
-                            <th>Начало</th>
-                            <th>Окончание</th>
-                            <th>Длительность</th>
-                            <th>Простой</th>
-                        </tr>
-                    </thead>
-                    <tbody id="tableBody">
-                    </tbody>
+        <section class="panel">
+            <div class="filters">
+                <div class="f auto"><span>Период</span>
+                    <div class="quick" id="quick">
+                        <button data-p="today">Сегодня</button><button data-p="yesterday">Вчера</button>
+                        <button data-p="week">7 дней</button><button data-p="month">Месяц</button><button data-p="all">Всё</button>
+                    </div>
+                </div>
+                <label class="f"><span>С</span><input type="date" id="from"></label>
+                <label class="f"><span>По</span><input type="date" id="to"></label>
+                <label class="f"><span>Направление</span><select id="napr"></select></label>
+                <label class="f"><span>ТЦ</span><select id="tehc"></select></label>
+                <label class="f"><span>Тип</span><select id="type"></select></label>
+                <label class="f wide"><span>Поиск</span><input type="search" id="q" placeholder="PW, адрес, оборудование, текст"></label>
+                <label class="check" style="height:34px"><input type="checkbox" id="open"> только НВ</label>
+            </div>
+            <div class="table-wrap">
+                <table class="report-table">
+                    <thead><tr>
+                        <th class="num">№</th><th>PW/NTT</th><th>Напр.</th><th>ТЦ</th><th>Кат.</th><th>Сеть</th>
+                        <th>Сетевой элемент</th><th class="num">БС</th><th>Оборудование</th><th>Тип</th><th>Описание</th>
+                        <th>Начало</th><th>Окончание</th><th>АКБ</th><th>ГУ</th><th>Длительность</th>
+                        <th>Перерыв</th><th>Общий простой</th><th>Кому</th><th>Подробно</th><th>Внёс</th>
+                    </tr></thead>
+                    <tbody id="rows"><tr><td colspan="21" class="empty">Загрузка…</td></tr></tbody>
+                    <tfoot id="foot"></tfoot>
                 </table>
             </div>
-        </main>
+        </section>
+    </main>
+
+    <div class="modal" id="modal" hidden>
+        <div class="modal-box">
+            <div class="modal-head">
+                <h2 id="modal-title">Авария</h2>
+                <div>
+                    <button class="btn btn-sm btn-danger can-admin" id="delete">Удалить</button>
+                    <button class="modal-x" id="modal-x" title="Закрыть">×</button>
+                </div>
+            </div>
+            <div id="modal-form"></div>
+        </div>
     </div>
 
     <script>
-        if (!localStorage.getItem('motiv_user')) {
-            window.location.href = 'login.html';
-        } else {
-            document.body.style.display = 'block';
-            var user = JSON.parse(localStorage.getItem('motiv_user'));
-            document.getElementById('user-name').innerText = user.username;
+        var M = Motiv, session = M.initPage('reports.html');
+        var rows = [], form, openedId = null;
+
+        function setPeriod(p) {
+            var now = new Date(), from = new Date(now), to = new Date(now);
+            if (p === 'yesterday') { from.setDate(now.getDate() - 1); to.setDate(now.getDate() - 1); }
+            if (p === 'week') from.setDate(now.getDate() - 6);
+            if (p === 'month') from.setDate(1);
+            document.getElementById('from').value = p === 'all' ? '' : M.isoDate(from);
+            document.getElementById('to').value = p === 'all' ? '' : M.isoDate(to);
+            markQuick(p);
+            load();
+        }
+        function markQuick(p) {
+            Array.prototype.forEach.call(document.querySelectorAll('#quick button'), function (b) {
+                b.className = b.getAttribute('data-p') === p ? 'active' : '';
+            });
         }
 
-        function logout() {
-            localStorage.removeItem('motiv_user');
-            window.location.href = 'login.html';
+        function query() {
+            var params = [], map = { date_from: 'from', date_to: 'to', napr: 'napr', tehc: 'tehc', alarm_type: 'type', q: 'q' };
+            Object.keys(map).forEach(function (k) {
+                var v = document.getElementById(map[k]).value.trim();
+                if (v) params.push(k + '=' + encodeURIComponent(v));
+            });
+            if (document.getElementById('open').checked) params.push('only_open=true');
+            return params.join('&');
         }
 
-        function renderTable(data) {
-            var tbody = document.getElementById('tableBody');
-            tbody.innerHTML = '';
+        function cell(v, cls) { return '<td' + (cls ? ' class="' + cls + '"' : '') + ' title="' + M.esc(v) + '">' + M.esc(v) + '</td>'; }
 
-            if (data.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="12" style="text-align:center;">Нет данных</td></tr>';
+        function render() {
+            var tbody = document.getElementById('rows');
+            if (!rows.length) {
+                tbody.innerHTML = '<tr><td colspan="21" class="empty">За этот период аварий нет</td></tr>';
+                document.getElementById('foot').innerHTML = '';
                 return;
             }
-
-            for (var i = 0; i < data.length; i++) {
-                var a = data[i];
-                var tr = document.createElement('tr');
-
-                var statusClass = 'badge-success';
-                if (a.end_time === 'НВ') {
-                    statusClass = 'badge-danger';
-                } else if (a.lenght && a.lenght.split(':')[0] > 4) {
-                    statusClass = 'badge-warning';
-                }
-
-                tr.innerHTML =
-                    '<td>' + (a.pw || '') + '</td>' +
-                    '<td>' + (a.napr || '') + '</td>' +
-                    '<td>' + (a.tehc || '') + '</td>' +
-                    '<td>' + (a.kateg || '') + '</td>' +
-                    '<td>' + (a.netw_type || '') + '</td>' +
-                    '<td>' + (a.serv_elem || '') + '</td>' +
-                    '<td>' + (a.numb_rbs || '') + '</td>' +
-                    '<td>' + (a.alarm_type || '') + '</td>' +
-                    '<td>' + (a.begin_time ? a.begin_time.replace('T', ' ') : '') + '</td>' +
-                    '<td>' + (a.end_time ? a.end_time.replace('T', ' ') : '') + '</td>' +
-                    '<td><span class="badge ' + statusClass + '">' + (a.lenght || '') + '</span></td>' +
-                    '<td>' + (a.common_prostoy || '') + '</td>';
-
-                tbody.appendChild(tr);
-            }
+            var totalSec = 0, open = 0;
+            tbody.innerHTML = rows.map(function (a) {
+                totalSec += M.toSec(a.COMMON_PROSTOY);
+                if (a.IS_OPEN) open++;
+                return '<tr class="clickable" data-id="' + a.ID + '">' +
+                    '<td class="num muted">' + a.ID + '</td>' + cell(a.PW, 'nowrap') + cell(a.NAPR, 'nowrap') + cell(a.TEHC) +
+                    '<td>' + (a.KATEG ? '<span class="kat kat-' + a.KATEG + '">' + a.KATEG + '</span>' : '') + '</td>' +
+                    cell(a.NETW_TYPE, 'nowrap') + cell(a.SERV_ELEM, 'cut') +
+                    '<td class="num">' + (a.NUMB_RBS === 0 ? 'С' : M.esc(a.NUMB_RBS)) + '</td>' +
+                    cell(a.EQIP_TYPE, 'cut') + cell(a.ALARM_TYPE) + cell(a.DESCR, 'cut') +
+                    '<td class="mono">' + M.fmtDateTime(a.BEGIN_TIME) + '</td>' +
+                    '<td class="mono">' + (a.IS_OPEN ? '<span class="nv-badge">НВ</span>' : M.fmtDateTime(a.END_TIME)) + '</td>' +
+                    cell(a.AKB, 'mono') + cell(a.DGU, 'mono') +
+                    '<td class="mono"' + (a.IS_OPEN ? ' style="color:var(--red)"' : '') + '>' + M.esc(a.LENGHT) + '</td>' +
+                    cell(a.PROSTOY, 'mono') + '<td class="mono"><b>' + M.esc(a.COMMON_PROSTOY) + '</b></td>' +
+                    cell(a.ALARM_WHO, 'cut') + cell(a.DESC_NOTICE, 'cut') + cell(a.UPDATED_BY || a.CREATED_BY, 'muted') +
+                    '</tr>';
+            }).join('');
+            document.getElementById('foot').innerHTML = '<tr><td colspan="17">Итого: ' + rows.length + ' ' +
+                (rows.length % 10 === 1 && rows.length % 100 !== 11 ? 'авария' : 'аварий') +
+                (open ? ', не закрыто: ' + open : '') + '</td><td class="mono">' + M.hms(totalSec) + '</td><td colspan="3"></td></tr>';
         }
 
-        function loadData() {
-            var alarms = JSON.parse(localStorage.getItem('motiv_alarms') || '[]');
-            renderTable(alarms);
+        function load() {
+            M.api('GET', '/alarms?' + query()).then(function (r) { rows = r; render(); })
+                .catch(function (e) { M.toast(e.message, 'error'); });
         }
 
-        function filterTable() {
-            var start = document.getElementById('filterStart').value;
-            var end = document.getElementById('filterEnd').value;
-            var alarms = JSON.parse(localStorage.getItem('motiv_alarms') || '[]');
+        function openModal(id) {
+            M.api('GET', '/alarms/' + id).then(function (a) {
+                openedId = id;
+                document.getElementById('modal-title').textContent = 'Авария № ' + a.ID + (a.IS_OPEN ? ' · НВ' : '');
+                document.getElementById('modal').hidden = false;
+                form.ready.then(function () { form.fill(a); });
+            });
+        }
+        function closeModal() { document.getElementById('modal').hidden = true; openedId = null; }
 
-            var filtered = alarms.filter(function(a) {
-                if (!a.begin_time) return false;
-                var aDate = a.begin_time.split('T')[0];
+        function fillSelect(id, values) {
+            document.getElementById(id).innerHTML = '<option value="">Все</option>' + values.map(function (v) {
+                return '<option>' + M.esc(v) + '</option>';
+            }).join('');
+        }
 
-                if (start && aDate < start) return false;
-                if (end && aDate > end) return false;
-                return true;
+        if (session) {
+            form = AlarmForm.create(document.getElementById('modal-form'), {
+                readonly: !M.can('edit'),
+                onSaved: function () { closeModal(); load(); },
+                onCancel: closeModal
+            });
+            M.api('GET', '/dicts').then(function (d) {
+                fillSelect('napr', d.napr); fillSelect('tehc', d.tehc); fillSelect('type', d.alarm_type);
             });
 
-            renderTable(filtered);
+            document.getElementById('rows').onclick = function (e) {
+                var tr = e.target.closest('tr[data-id]');
+                if (tr) openModal(tr.getAttribute('data-id'));
+            };
+            document.getElementById('modal-x').onclick = closeModal;
+            document.getElementById('modal').onclick = function (e) { if (e.target.id === 'modal') closeModal(); };
+            document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeModal(); });
+            document.getElementById('delete').onclick = function () {
+                if (!confirm('Удалить аварию № ' + openedId + ' без возможности восстановления?')) return;
+                M.api('DELETE', '/alarms/' + openedId).then(function () {
+                    M.toast('Авария удалена'); closeModal(); load();
+                }).catch(function (x) { M.toast(x.message, 'error'); });
+            };
+
+            Array.prototype.forEach.call(document.querySelectorAll('#quick button'), function (b) {
+                b.onclick = function () { setPeriod(b.getAttribute('data-p')); };
+            });
+            ['from', 'to'].forEach(function (id) {
+                document.getElementById(id).onchange = function () { markQuick(''); load(); };
+            });
+            ['napr', 'tehc', 'type', 'open'].forEach(function (id) { document.getElementById(id).onchange = load; });
+            var timer;
+            document.getElementById('q').oninput = function () { clearTimeout(timer); timer = setTimeout(load, 300); };
+
+            document.getElementById('csv').onclick = function () {
+                var f = document.getElementById('from').value, t = document.getElementById('to').value;
+                M.download('/alarms-export.csv?' + query(), 'avarii_' + (f || 'vse') + (t ? '_' + t : '') + '.csv')
+                    .then(function () { M.toast('Выгружено строк: ' + rows.length); })
+                    .catch(function (e) { M.toast(e.message, 'error'); });
+            };
+
+            setPeriod('week');
         }
-
-        function exportCSV() {
-            var alarms = JSON.parse(localStorage.getItem('motiv_alarms') || '[]');
-            if (alarms.length === 0) {
-                alert('Нет данных для выгрузки');
-                return;
-            }
-
-            var csvContent = "PW;Направление;ТЦ;Категория;Тип сети;Сетевой элемент;Кол-во БС;Тип аварии;Начало;Окончание;Длительность;Простой\n";
-
-            for (var i = 0; i < alarms.length; i++) {
-                var a = alarms[i];
-                var row = [
-                    a.pw, a.napr, a.tehc, a.kateg, a.netw_type, a.serv_elem, a.numb_rbs, a.alarm_type,
-                    a.begin_time, a.end_time, a.lenght, a.common_prostoy
-                ].join(';');
-                csvContent += row + "\n";
-            }
-
-            var blob = new Blob(["\uFEFF" + csvContent], { type: 'text/csv;charset=utf-8;' });
-            var link = document.createElement("a");
-            var url = URL.createObjectURL(blob);
-            link.setAttribute("href", url);
-            link.setAttribute("download", "report.csv");
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-        }
-
-        loadData();
     </script>
 </body>
 </html>
