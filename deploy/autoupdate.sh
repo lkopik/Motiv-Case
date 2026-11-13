@@ -2,7 +2,7 @@
 
 #   cd ~/motiv-case && bash deploy/autoupdate.sh [ветка] [минуты]
 
-BRANCH=${1:-main}
+BRANCH=${1:-test}
 MINUTES=${2:-5}
 export COMPOSE_BAKE=false
 cd "$(dirname "$0")/.." || exit 1
