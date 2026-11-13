@@ -36,5 +36,4 @@ services:
       - backend
 
 volumes:
-  mariadb_d
-  ata:
+  mariadb_data:
