@@ -16,11 +16,11 @@ host_ip() {
 }
 
 deploy() {
+    docker compose down
     if [ "$1" = reset ]; then
-        log "Изменился init_scripts — пересоздаю базу"
-        docker compose down -v
-    else
-        docker compose down
+        # базу сами не стираем: в db_data живые данные
+        log "Изменился init_scripts. Чтобы применить, пересоздайте базу вручную:"
+        log "  docker compose down && sudo rm -rf db_data && docker compose up -d"
     fi
     if docker compose up -d --build; then log "Готово: http://$(host_ip):82"; else log "ОШИБКА сборки — смотрите вывод выше"; fi
 }
