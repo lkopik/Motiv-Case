@@ -9,14 +9,21 @@ cd "$(dirname "$0")/.." || exit 1
 
 log() { echo "[$(date +%H:%M:%S)] $*"; }
 
+# IP ноутбука в сети Wi-Fi; имя интерфейса можно переопределить: IFACE=wlp2s0 bash deploy/autoupdate.sh
+IFACE=${IFACE:-wlan0}
+host_ip() {
+    ip -4 -o addr show "$IFACE" 2>/dev/null | awk '{print $4}' | cut -d/ -f1 | head -1 | grep . \
+        || hostname -I | awk '{print $1}'
+}
+
 deploy() {
     if [ "$1" = reset ]; then
         log "Изменился init_scripts — пересоздаю базу"
         docker compose down -v
-    elses
+    else
         docker compose down
     fi
-    if docker compose up -d --build; then log "Готово: http://localhost:82"; else log "ОШИБКА сборки — смотрите вывод выше"; fi
+    if docker compose up -d --build; then log "Готово: http://$(host_ip):82"; else log "ОШИБКА сборки — смотрите вывод выше"; fi
 }
 
 git fetch -q origin "$BRANCH"
