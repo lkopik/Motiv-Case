@@ -1,39 +1,63 @@
+# Веб-отчётность по авариям сети (кейс «Мотив»)
+# Запуск:          docker compose up -d --build
+# Масштабирование: docker compose up -d --scale backend=3   (nginx сам раздаёт запросы по копиям)
+
 services:
-  #MariaDB
+  # MariaDB 10.1 — требование ТЗ, порт 3306
   db:
     image: mariadb:10.1
     restart: always
     environment:
-      MYSQL_ROOT_PASSWORD: motivchik_qwe
-      MYSQL_DATABASE: logs_of_db
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD:-motivchik_qwe}
+      MYSQL_DATABASE: ${DB_NAME:-logs_of_db}
+    # utf8mb4 — чтобы русский текст хранился без «кракозябр»;
+    # NO_ENGINE_SUBSTITUTION без строгого режима — разрешает нулевую дату для «НВ» (настоящее время)
+    command: >
+      --character-set-server=utf8mb4
+      --collation-server=utf8mb4_unicode_ci
+      --sql-mode=NO_ENGINE_SUBSTITUTION
     ports:
-      - "3307:3306"
+      - "${DB_PORT:-3306}:3306"
     volumes:
-      - mariadb_data:/var/lib/mysql
-      - ./init_scripts:/docker-entrypoint-initdb.d
+      - alarms_db:/var/lib/mysql
+      - ./init_scripts:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p$$MYSQL_ROOT_PASSWORD --silent"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
 
-  #FastAPI
+  # FastAPI. Порт наружу не пробрасываем — к бэкенду ходят через nginx,
+  # поэтому можно запускать несколько копий (--scale backend=N)
   backend:
     build: ./backend
     restart: always
-    ports:
-      - "8000:8000"
+    environment:
+      DB_HOST: db
+      DB_PORT: 3306
+      DB_USER: root
+      DB_PASSWORD: ${DB_PASSWORD:-motivchik_qwe}
+      DB_NAME: ${DB_NAME:-logs_of_db}
+    expose:
+      - "8000"
     volumes:
       - ./backend:/app
     command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
     depends_on:
-      - db
+      db:
+        condition: service_healthy
 
-  #Фронтенд (Раздача статических HTML/JS файлов)
+  # nginx: раздаёт фронтенд и проксирует /api на бэкенд
   frontend:
     image: nginx:alpine
+    restart: always
     ports:
-      - "82:80"
+      - "${FRONTEND_PORT:-82}:80"
     volumes:
-      - ./frontend:/usr/share/nginx/html
-    command: /bin/sh -c "echo 'server { listen 80; location / { root /usr/share/nginx/html; } location /api/ { proxy_pass http://backend:8000/api/; } }' > /etc/nginx/conf.d/default.conf && nginx -g 'daemon off;'"
+      - ./frontend:/usr/share/nginx/html:ro
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
     depends_on:
       - backend
 
 volumes:
-  mariadb_data:
+  alarms_db:
