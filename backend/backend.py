@@ -12,6 +12,8 @@ DB_CONFIG = {
     "autocommit": True,
 }
 
+async def db_health():
+    """Проверка, что бэкенд жив и видит базу."""
 async def health():
     try:
         conn = await aiomysql.connect(**DB_CONFIG)
