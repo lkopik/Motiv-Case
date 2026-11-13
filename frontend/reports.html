@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>МОТИВ - Отчетность</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body style="display: none;">
+
+    <nav class="navbar">
+        <div class="nav-logo">МОТИВ</div>
+        <div class="nav-user">
+            <span id="user-name">-</span>
+            <button class="btn btn-secondary" onclick="logout()">Выход</button>
+        </div>
+    </nav>
+
+    <div class="layout">
+        <aside class="sidebar">
+            <a href="index.html">Аварии</a>
+            <a href="reports.html" class="active">Отчетность</a>
+        </aside>
+
+        <main class="main-content">
+            <div class="page-title">Отчетность по авариям</div>
+
+            <div style="margin-bottom: 15px; display: flex; flex-wrap: wrap;">
+                <div style="margin-right: 15px;">
+                    <label style="margin-right: 5px;">С:</label>
+                    <input type="date" id="filterStart">
+                </div>
+                <div style="margin-right: 15px;">
+                    <label style="margin-right: 5px;">По:</label>
+                    <input type="date" id="filterEnd">
+                </div>
+                <button class="btn" onclick="filterTable()">Применить</button>
+                <button class="btn btn-secondary" onclick="exportCSV()" style="margin-left: 10px;">Выгрузить CSV</button>
+            </div>
+
+            <div class="table-container">
+                <table id="alarmsTable">
+                    <thead>
+                        <tr>
+                            <th>PW</th>
+                            <th>Напр.</th>
+                            <th>ТЦ</th>
+                            <th>Кат.</th>
+                            <th>Тип сети</th>
+                            <th>Сетевой элемент</th>
+                            <th>Кол-во БС</th>
+                            <th>Тип аварии</th>
+                            <th>Начало</th>
+                            <th>Окончание</th>
+                            <th>Длительность</th>
+                            <th>Простой</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody">
+                    </tbody>
+                </table>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        if (!localStorage.getItem('motiv_user')) {
+            window.location.href = 'login.html';
+        } else {
+            document.body.style.display = 'block';
+            var user = JSON.parse(localStorage.getItem('motiv_user'));
+            document.getElementById('user-name').innerText = user.username;
+        }
+
+        function logout() {
+            localStorage.removeItem('motiv_user');
+            window.location.href = 'login.html';
+        }
+
+        function renderTable(data) {
+            var tbody = document.getElementById('tableBody');
+            tbody.innerHTML = '';
+
+            if (data.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="12" style="text-align:center;">Нет данных</td></tr>';
+                return;
+            }
+
+            for (var i = 0; i < data.length; i++) {
+                var a = data[i];
+                var tr = document.createElement('tr');
+
+                var statusClass = 'badge-success';
+                if (a.end_time === 'НВ') {
+                    statusClass = 'badge-danger';
+                } else if (a.lenght && a.lenght.split(':')[0] > 4) {
+                    statusClass = 'badge-warning';
+                }
+
+                tr.innerHTML =
+                    '<td>' + (a.pw || '') + '</td>' +
+                    '<td>' + (a.napr || '') + '</td>' +
+                    '<td>' + (a.tehc || '') + '</td>' +
+                    '<td>' + (a.kateg || '') + '</td>' +
+                    '<td>' + (a.netw_type || '') + '</td>' +
+                    '<td>' + (a.serv_elem || '') + '</td>' +
+                    '<td>' + (a.numb_rbs || '') + '</td>' +
+                    '<td>' + (a.alarm_type || '') + '</td>' +
+                    '<td>' + (a.begin_time ? a.begin_time.replace('T', ' ') : '') + '</td>' +
+                    '<td>' + (a.end_time ? a.end_time.replace('T', ' ') : '') + '</td>' +
+                    '<td><span class="badge ' + statusClass + '">' + (a.lenght || '') + '</span></td>' +
+                    '<td>' + (a.common_prostoy || '') + '</td>';
+
+                tbody.appendChild(tr);
+            }
+        }
+
+        function loadData() {
+            var alarms = JSON.parse(localStorage.getItem('motiv_alarms') || '[]');
+            renderTable(alarms);
+        }
+
+        function filterTable() {
+            var start = document.getElementById('filterStart').value;
+            var end = document.getElementById('filterEnd').value;
+            var alarms = JSON.parse(localStorage.getItem('motiv_alarms') || '[]');
+
+            var filtered = alarms.filter(function(a) {
+                if (!a.begin_time) return false;
+                var aDate = a.begin_time.split('T')[0];
+
+                if (start && aDate < start) return false;
+                if (end && aDate > end) return false;
+                return true;
+            });
+
+            renderTable(filtered);
+        }
+
+        function exportCSV() {
+            var alarms = JSON.parse(localStorage.getItem('motiv_alarms') || '[]');
+            if (alarms.length === 0) {
+                alert('Нет данных для выгрузки');
+                return;
+            }
+
+            var csvContent = "PW;Направление;ТЦ;Категория;Тип сети;Сетевой элемент;Кол-во БС;Тип аварии;Начало;Окончание;Длительность;Простой\n";
+
+            for (var i = 0; i < alarms.length; i++) {
+                var a = alarms[i];
+                var row = [
+                    a.pw, a.napr, a.tehc, a.kateg, a.netw_type, a.serv_elem, a.numb_rbs, a.alarm_type,
+                    a.begin_time, a.end_time, a.lenght, a.common_prostoy
+                ].join(';');
+                csvContent += row + "\n";
+            }
+
+            var blob = new Blob(["\uFEFF" + csvContent], { type: 'text/csv;charset=utf-8;' });
+            var link = document.createElement("a");
+            var url = URL.createObjectURL(blob);
+            link.setAttribute("href", url);
+            link.setAttribute("download", "report.csv");
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        loadData();
+    </script>
+</body>
+</html>
