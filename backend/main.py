@@ -40,8 +40,10 @@ class DataUpload(BaseModel):
             raise ValueError('Ошибка. Введенное значение должно быть числом')
 
     @field_validator('device_num')
-    def aaa(self):
-        pass
+    def aaa(cls, v):
+        # TODO: проверка номера PW/NTT. Валидатор должен принимать (cls, v) и возвращать значение,
+        # с (self) pydantic не даёт запустить приложение
+        return v
 
 
 

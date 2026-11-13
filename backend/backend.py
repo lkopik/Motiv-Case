@@ -14,15 +14,28 @@ DB_CONFIG = {
     "cursorclass": aiomysql.DictCursor
 }
 
+# Пул соединений для функций ниже; создаётся при старте приложения (main.py → init_pool)
+pool = None
+
+
+async def init_pool():
+    global pool
+    if pool is None:
+        pool = await aiomysql.create_pool(minsize=1, maxsize=5, **DB_CONFIG)
+
+
 async def db_health():
     """Проверка, что бэкенд жив и видит базу."""
+    return await health()
+
+
 async def health():
     if not pool: return {"database": "error: pool not initialized"}
     try:
         async with pool.acquire() as conn:
             async with conn.cursor() as cur:
-                await cur.execute("SELECT COUNT(*) FROM ALARMS")
-                (alarms,) = await cur.fetchone()
+                await cur.execute("SELECT COUNT(*) AS alarms FROM ALARMS")
+                alarms = (await cur.fetchone())["alarms"]   # DictCursor возвращает словарь
         return {"database": "ok", "alarms": alarms}
     except Exception as e:
         return {"database": f"error: {e}"}

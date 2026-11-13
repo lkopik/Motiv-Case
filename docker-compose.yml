@@ -9,6 +9,7 @@ services:
       --character-set-server=utf8mb4
       --collation-server=utf8mb4_unicode_ci
       --sql-mode=NO_ENGINE_SUBSTITUTION
+      --default-time-zone=${DB_TZ:-+05:00}
     ports:
       - "${DB_PORT:-3306}:3306"
     volumes:
