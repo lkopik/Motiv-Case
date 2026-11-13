@@ -36,7 +36,7 @@ var AlarmForm = (function () {
         '<form class="alarm-form" novalidate autocomplete="off">' +
         '<div class="form-error" hidden></div>' +
 
-        '<fieldset><legend>Что и где</legend><div class="grid g-6">' +
+        '<fieldset><div class="grid g-6">' +
           '<label class="f c-2"><span>1. Номер PW / NTT</span><input name="PW" placeholder="NTT-123456 или ссылка — можно пусто"></label>' +
           '<label class="f"><span>2. Направление</span><select name="NAPR">' + options(d.napr, true) + '</select></label>' +
           '<label class="f"><span>3. ТЦ</span><select name="TEHC">' + options(d.tehc, true) + '</select></label>' +

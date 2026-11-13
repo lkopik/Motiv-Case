@@ -275,3 +275,8 @@ button::-moz-focus-inner { border: 0; }
 input:-webkit-autofill { -webkit-box-shadow: 0 0 0 40px #fff inset; }   /* без жёлто-синей заливки автозаполнения */
 input::-webkit-calendar-picker-indicator { cursor: pointer; opacity: .6; }
 input::-webkit-calendar-picker-indicator:hover { opacity: 1; }
+
+/* логотип */
+.logo { display: block; height: 34px; width: auto; }
+.brand { margin-right: 32px; }
+.login-aside .logo { height: 44px; }

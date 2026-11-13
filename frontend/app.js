@@ -137,11 +137,11 @@ var Motiv = (function () {
         var header = document.createElement('header');
         header.className = 'topbar';
         header.innerHTML =
-            '<a class="brand" href="index.html"><span class="brand-mark"></span>МОТИВ <small>Веб-отчётность</small></a>' +
+            '<a class="brand" href="index.html"><img class="logo" src="logo.svg" alt="Мотив"></a>' +
             '<nav class="tabs">' + nav + '</nav>' +
             '<div class="topbar-right">' +
             '<span class="clock" id="clock"></span>' +
-            '<span class="who"><b>' + esc(s.full_name || s.username) + '</b><span class="role role-' + esc(s.role) + '">' +
+            '<span class="who"><b>' + esc(s.full_name && s.full_name !== s.role_name ? s.full_name : s.username) + '</b><span class="role role-' + esc(s.role) + '">' +
             esc(s.role_name) + '</span></span>' +
             '<button class="link-btn" id="logout">Выйти</button></div>';
         document.body.insertBefore(header, document.body.firstChild);
