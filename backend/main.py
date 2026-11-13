@@ -55,3 +55,31 @@ def health_check():
 @app.get('/Accident')
 def data_tranfer():
     pass
+
+
+# ---------------------------------------------------------------------------
+# Рабочее API сайта (через nginx доступно только то, что начинается с /api):
+# вход и роли — auth.py, аварии, отчётность, CSV, справочники, статистика — alarms.py
+# ---------------------------------------------------------------------------
+import alarms
+import auth
+import backend
+import db
+
+app.include_router(auth.router)
+app.include_router(alarms.router)
+
+
+@app.on_event("startup")
+async def startup():
+    await backend.init_pool()   # пул для функций из backend.py
+
+
+@app.get("/api/health", tags=["service"])
+async def api_health():
+    """Проверка, что бэкенд жив и видит базу."""
+    try:
+        row = await db.fetch_one("SELECT COUNT(*) AS alarms, VERSION() AS version FROM ALARMS")
+        return {"api": "ok", "database": "ok", **row}
+    except Exception as e:
+        return {"api": "ok", "database": f"error: {e}"}
