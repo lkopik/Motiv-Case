@@ -459,3 +459,14 @@ html.dark .leaflet-bar a, html.dark .leaflet-control-attribution { background: #
 html.dark .leaflet-control-attribution a { color: #ff8c42; }
 html.dark .tc-label { color: #f2f1ec; text-shadow: 0 0 3px #000, 0 0 3px #000, 0 0 3px #000; }
 html.dark .tc-label i { background: #f2f1ec; border-color: #111; }
+
+.topbar, .statusbar, .page > *:not(.map-grid), .map-grid > aside, .map-grid > section > .panel-head,
+.modal-box, .toasts, .login2 { zoom: var(--zoom, 1); }
+.outage { top: calc(60px * var(--zoom, 1)); }
+.scale { display: inline-flex; align-items: center; }
+.scale b { min-width: 46px; text-align: center; font-size: 13px; color: #c9c7c0; }
+.scale .link-btn { font-weight: 700; padding: 2px 6px; }
+
+html.zoom-big .split, html.zoom-big .map-grid, html.zoom-big .help-grid { grid-template-columns: minmax(0, 1fr); }
+html.zoom-big .help-toc { position: static; }
+html.zoom-big .topbar .brand em, html.zoom-big .who .role, html.zoom-big .statusbar .sb-keys { display: none; }

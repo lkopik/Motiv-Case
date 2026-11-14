@@ -1,6 +1,8 @@
 
 try {
     if (localStorage.getItem('motiv_theme') === 'dark') document.documentElement.className += ' dark';
+    document.documentElement.style.setProperty('--zoom', (parseInt(localStorage.getItem('motiv_scale'), 10) || 100) / 100);
+    if ((parseInt(localStorage.getItem('motiv_scale'), 10) || 100) >= 125) document.documentElement.className += ' zoom-big';
 } catch (e) {}
 
 var Motiv = (function () {
@@ -169,10 +171,31 @@ var Motiv = (function () {
             '<div class="topbar-right">' +
             '<span class="who" title="' + esc(s.role_name) + '">' + esc(name) + ' <i class="role role-' + esc(s.role) + '">' +
             esc(s.role_name) + '</i></span>' +
+            '<span class="scale"><button class="link-btn" id="scale-down" title="Мельче">A−</button>' +
+            '<b id="scale-value"></b><button class="link-btn" id="scale-up" title="Крупнее">A+</button></span>' +
             '<button class="link-btn" id="theme"></button>' +
             '<button class="link-btn" id="logout" title="Выйти">Выход</button></div>';
         document.body.insertBefore(header, document.body.firstChild);
         document.getElementById('logout').onclick = logout;
+        var SCALES = [90, 100, 110, 125, 140];
+        var scale = parseInt(localStorage.getItem('motiv_scale'), 10) || 100;
+        var setScale = function (value) {
+            scale = value;
+            document.documentElement.style.setProperty('--zoom', value / 100);
+            document.documentElement.classList.toggle('zoom-big', value >= 125);
+            document.getElementById('scale-value').textContent = value + '%';
+            try { localStorage.setItem('motiv_scale', value); } catch (e) {}
+            window.dispatchEvent(new Event('resize'));
+        };
+        setScale(scale);
+        document.getElementById('scale-down').onclick = function () {
+            var i = SCALES.indexOf(scale);
+            if (i > 0) setScale(SCALES[i - 1]);
+        };
+        document.getElementById('scale-up').onclick = function () {
+            var i = SCALES.indexOf(scale);
+            if (i < SCALES.length - 1) setScale(SCALES[i + 1]);
+        };
         var themeBtn = document.getElementById('theme');
         var setThemeText = function () {
             themeBtn.textContent = document.documentElement.classList.contains('dark') ? 'Светлая тема' : 'Тёмная тема';
