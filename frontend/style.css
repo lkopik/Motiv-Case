@@ -472,3 +472,5 @@ html.zoom-big .help-toc { position: static; }
 html.zoom-big .topbar .brand em, html.zoom-big .who .role, html.zoom-big .statusbar .sb-keys { display: none; }
 
 @media (max-width: 1000px) { .split { grid-template-columns: minmax(0, 1fr); } }
+
+.split > .panel, .map-grid > .panel { margin-top: 0; }
