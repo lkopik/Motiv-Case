@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-BRANCH=${1:-test}
+BRANCH=${1:-main}
 MINUTES=${2:-5}
 export COMPOSE_BAKE=false
 cd "$(dirname "$0")/.." || exit 1
