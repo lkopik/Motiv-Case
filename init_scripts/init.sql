@@ -1,36 +1,27 @@
 SET NAMES utf8mb4;
 
---
--- Журнал аварий. Одна строка = одна авария.
---
-
 CREATE TABLE IF NOT EXISTS ALARMS (
     ID              INT AUTO_INCREMENT PRIMARY KEY,
-    PW              VARCHAR(450),   -- 1  Номер PW/NTT (ссылка в CRM)
-    NAPR            VARCHAR(450),   -- 2  Направление: ХМЯН, СВН, ЮЗН, Вся сеть
-    TEHC            VARCHAR(450),   -- 3  ТЦ: НБР, АСБ, ИРБ, ...
-    KATEG           TINYINT,        -- 4  Категория: 1, 2, 3
-    NETW_TYPE       VARCHAR(450),   -- 5  Тип сети: GSM, LTE, LTE/GSM
-    SERV_ELEM       VARCHAR(450),   -- 6  Сетевой элемент, услуга (адреса БС)
-    NUMB_RBS        INT,            -- 7  Количество БС (0 = «С», сектор)
-    EQIP_TYPE       VARCHAR(450),   -- 8  Тип оборудования
-    ALARM_TYPE      VARCHAR(450),   -- 9  Тип: РРС, ССС, ЭЛ, RBS, МСПД, ТМ, ОПС, ПР, АВР, Аренда
-    DESCR           VARCHAR(450),   -- 10 Описание
-    BEGIN_TIME      DATETIME,       -- 11 Начало
-    END_TIME        DATETIME,       -- 12 Окончание; '0000-00-00 00:00:00' = НВ (настоящее время)
-    AKB             TIME,           -- 13 Работа от АКБ
-    DGU             TIME,           -- 14 Работа от генератора (ГУ)
-    LENGHT          VARCHAR(450),   -- 15 Длительность аварии — считается автоматически
-    PROSTOY         TIME,           -- 16 Время перерыва связи (1 БС)
-    COMMON_PROSTOY  TIME,           -- 17 Общий простой = PROSTOY * NUMB_RBS — автоматически
-    ALARM_WHO       VARCHAR(450),   -- 18 Уведомление об аварии (кому)
-    DESC_NOTICE     VARCHAR(450)    -- 19 Подробное описание
+    PW              VARCHAR(450),
+    NAPR            VARCHAR(450),
+    TEHC            VARCHAR(450),
+    KATEG           TINYINT,
+    NETW_TYPE       VARCHAR(450),
+    SERV_ELEM       VARCHAR(450),
+    NUMB_RBS        INT,
+    EQIP_TYPE       VARCHAR(450),
+    ALARM_TYPE      VARCHAR(450),
+    DESCR           VARCHAR(450),
+    BEGIN_TIME      DATETIME,
+    END_TIME        DATETIME,
+    AKB             TIME,
+    DGU             TIME,
+    LENGHT          VARCHAR(450),
+    PROSTOY         TIME,
+    COMMON_PROSTOY  TIME,
+    ALARM_WHO       VARCHAR(450),
+    DESC_NOTICE     VARCHAR(450)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
---
--- Пользователи и роли: admin — всё, duty (дежурный) — вносит
--- и правит аварии, engineer — только просмотр. Пароль хранится как SHA-256.
---
 
 CREATE TABLE IF NOT EXISTS USERS (
     ID             INT AUTO_INCREMENT PRIMARY KEY,
@@ -45,7 +36,6 @@ INSERT INTO USERS (USERNAME, PASSWORD_HASH, ROLE, FULL_NAME) VALUES
     ('duty',     SHA2('duty123', 256),     'duty',     'Дежурный'),
     ('engineer', SHA2('engineer123', 256), 'engineer', 'Инженер');
 
--- Пара примеров, чтобы Некит мог показать первый запуск
 INSERT INTO ALARMS (PW, NAPR, TEHC, KATEG, NETW_TYPE, SERV_ELEM, NUMB_RBS, EQIP_TYPE, ALARM_TYPE,
                     DESCR, BEGIN_TIME, END_TIME, AKB, DGU, LENGHT, PROSTOY, COMMON_PROSTOY,
                     ALARM_WHO, DESC_NOTICE) VALUES
@@ -56,11 +46,6 @@ INSERT INTO ALARMS (PW, NAPR, TEHC, KATEG, NETW_TYPE, SERV_ELEM, NUMB_RBS, EQIP_
      'РРС', 'Обрыв РРЛ', '2026-11-13 06:05:00', '0000-00-00 00:00:00', NULL, NULL,
      NULL, '00:30:00', '00:00:00', 'Дежурный инженер ТЦ СЛХ', 'Авария продолжается (НВ), сектор без связи.');
 
--- -------------------------------------------------------------------------
--- Дополнения для сайта
--- -------------------------------------------------------------------------
-
--- Кто и когда внёс и менял запись (прозрачность отчётности, п. 4.1 ТЗ)
 ALTER TABLE ALARMS
     ADD COLUMN CREATED_BY VARCHAR(64),
     ADD COLUMN CREATED_AT DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -68,10 +53,9 @@ ALTER TABLE ALARMS
     ADD COLUMN UPDATED_AT DATETIME,
     ADD INDEX idx_begin (BEGIN_TIME);
 
--- Справочники для выпадающих списков. Администратор меняет их через сайт (вкладка «Справочники»).
 CREATE TABLE IF NOT EXISTS DICTS (
     ID     INT AUTO_INCREMENT PRIMARY KEY,
-    KIND   VARCHAR(32)  NOT NULL,   -- napr | tehc | kateg | netw_type | alarm_type
+    KIND   VARCHAR(32)  NOT NULL,
     VALUE  VARCHAR(128) NOT NULL,
     SORT   INT NOT NULL DEFAULT 0,
     UNIQUE KEY uk_kind_value (KIND, VALUE)
@@ -88,12 +72,9 @@ INSERT INTO DICTS (KIND, VALUE, SORT) VALUES
     ('alarm_type', 'РРС', 1), ('alarm_type', 'ССС', 2), ('alarm_type', 'ЭЛ', 3), ('alarm_type', 'RBS', 4),
     ('alarm_type', 'МСПД', 5), ('alarm_type', 'ТМ', 6), ('alarm_type', 'ОПС', 7), ('alarm_type', 'ПР', 8),
     ('alarm_type', 'АВР', 9), ('alarm_type', 'Аренда', 10),
-    -- встречаются в реальной сводке, в списке ТЗ их нет
     ('tehc', 'ШДР', 19), ('alarm_type', 'РРЛ', 11), ('alarm_type', 'ВОЛС', 12),
     ('alarm_type', 'ДГУ', 13), ('alarm_type', 'ИБП', 14);
 
--- Реальные (обезличенные) аварии из сводки «Аварии на сети СС» — 231 строка.
--- Время сдвинуто: момент снятия сводки = момент создания базы, длительности как в сводке.
 INSERT INTO ALARMS (PW, NAPR, TEHC, KATEG, NETW_TYPE, SERV_ELEM, NUMB_RBS, EQIP_TYPE, ALARM_TYPE, DESCR,
                     BEGIN_TIME, END_TIME, AKB, DGU, PROSTOY, ALARM_WHO, DESC_NOTICE, CREATED_BY) VALUES
     (NULL, 'СВН', 'АСБ', 1, 'LTE/GSM', 'VJ_K29 — Базовая станция «Кедровый-110»', 1, NULL, 'ЭЛ', 'Аварийное отключение сети', NOW() - INTERVAL 136132 MINUTE, '0000-00-00 00:00:00', NULL, NULL, '00:00:00', '20:30 Савельеву А.В.', 'Ввод №1 (10кВ).', 'duty'),
@@ -328,7 +309,6 @@ INSERT INTO ALARMS (PW, NAPR, TEHC, KATEG, NETW_TYPE, SERV_ELEM, NUMB_RBS, EQIP_
     (NULL, 'ЮЗН', 'ШДР', 3, 'LTE/GSM', 'XL_MZN — Базовая станция «Сосновый-212»', 1, NULL, 'ЭЛ', 'Аварийное отключение промсети', NOW() - INTERVAL 1644 MINUTE, NOW() - INTERVAL 1556 MINUTE, '01:28:00', NULL, '00:00:00', 'Ермаков И.А. (при получении сводки)', NULL, 'duty'),
     ('NTT-63339', 'ХМЯН', 'СЛХ', 1, 'LTE/GSM', 'УЗ_046 — Базовая станция «Заречный-046»', 7, NULL, 'РРЛ', 'Кратковременная блокировка БС', NOW() - INTERVAL 276 MINUTE, NOW() - INTERVAL 275 MINUTE, NULL, NULL, '00:07:00', 'Зорин Б.В.(при получении сводки)', 'Сильный ветер, неблагоприятные погодные условия, деградация сигнала.', 'duty');
 
--- Автоматические поля 15 и 17 — по тем же правилам, что и в приложении (backend/backend.py)
 UPDATE ALARMS SET
     LENGHT = TIME_FORMAT(SEC_TO_TIME(TIMESTAMPDIFF(SECOND, BEGIN_TIME,
                  IF(END_TIME = '0000-00-00 00:00:00', NOW(), END_TIME))), '%H:%i:%s'),

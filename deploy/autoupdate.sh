@@ -1,7 +1,5 @@
 #!/usr/bin/env bash
 
-#   cd ~/motiv-case && bash deploy/autoupdate.sh [ветка] [минуты]
-
 BRANCH=${1:-test}
 MINUTES=${2:-5}
 export COMPOSE_BAKE=false
@@ -18,7 +16,6 @@ host_ip() {
 deploy() {
     docker compose down
     if [ "$1" = reset ]; then
-        # базу сами не стираем: в db_data живые данные
         log "Изменился init_scripts. Чтобы применить, пересоздайте базу вручную:"
         log "  docker compose down && sudo rm -rf db_data && docker compose up -d"
     fi

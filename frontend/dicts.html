@@ -3,16 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Справочники — Мотив</title>
+    <title>Списки — Мотив</title>
     <link rel="icon" href="logo.png" type="image/png">
-    <link rel="stylesheet" href="style.css?v=10">
-    <script src="app.js?v=10"></script>
+    <link rel="stylesheet" href="style.css?v=11">
+    <script src="app.js?v=11"></script>
 </head>
 <body class="app">
     <main class="page">
         <div class="page-head">
             <div>
-                <h1>Справочники</h1>
+                <h1>Списки</h1>
                 <div class="page-sub">Значения выпадающих списков формы аварии</div>
             </div>
         </div>
@@ -44,7 +44,7 @@
 
         if (session) {
             if (!M.can('admin')) {
-                document.getElementById('kinds').innerHTML = '<div class="empty">Справочники меняет только администратор</div>';
+                document.getElementById('kinds').innerHTML = '<div class="empty">Списки меняет только администратор</div>';
             } else {
                 var box = document.getElementById('kinds');
                 box.onsubmit = function (e) {

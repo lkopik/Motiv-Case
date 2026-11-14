@@ -25,27 +25,26 @@ class DataLogin(BaseModel):
     username: str
     password: str
 
-
 class DataUpload(BaseModel):
-    device_num: str | None = Field(None, max_length=15) # №1
-    direction: str | None = Field(None, max_length=8) # №2
-    tech_center: str | None = Field(None, max_length=4) # №3
-    category: str | None = Field(None, max_length=1) # №4
+    device_num: str | None = Field(None, max_length=15)
+    direction: str | None = Field(None, max_length=8)
+    tech_center: str | None = Field(None, max_length=4)
+    category: str | None = Field(None, max_length=1)
     network_type: str | None = Field(None, max_length=7)# №5
-    network_element: str | None = Field(None, max_length=20) # №6
-    total_base_station: str | None = Field(None, max_length=10000) # №7
-    element_type: str | None = Field(None, max_length=255) # №8
-    type: str | None = Field(None, max_length=5) # №9
-    description: str | None = Field(None, max_length=255) # №10
-    start_time: str | None = Field(None, max_length=50) # №11
-    end_time: str | None = Field(None, max_length=50) # №12
-    lifetime_by_battery: str | None = Field(None, max_length=8) # №13
-    lifetime_by_generator: str | None = Field(None, max_length=8) # №14
-    time_accident: str | None = Field(None, max_length=8) # №15 !!!ПОМЕНЯТЬ НА ФОРМУЛУ ПО ТЗ!!!
-    time_connection_interupt: str | None = Field(None, max_length=8) # №16
-    base_station_downtime: str | None = Field(None, max_length=8) # №17 !!!ПОМЕНЯТЬ НА ФОРМУЛУ ПО ТЗ!!!
-    accident_comment: str | None = Field(None, max_length=20) # №18
-    accident_detailed_description: str | None = Field(None, max_length=255) # №19
+    network_element: str | None = Field(None, max_length=20)
+    total_base_station: str | None = Field(None, max_length=10000)
+    element_type: str | None = Field(None, max_length=255)
+    type: str | None = Field(None, max_length=5)
+    description: str | None = Field(None, max_length=255)
+    start_time: str | None = Field(None, max_length=50)
+    end_time: str | None = Field(None, max_length=50)
+    lifetime_by_battery: str | None = Field(None, max_length=8)
+    lifetime_by_generator: str | None = Field(None, max_length=8)
+    time_accident: str | None = Field(None, max_length=8)
+    time_connection_interupt: str | None = Field(None, max_length=8)
+    base_station_downtime: str | None = Field(None, max_length=8)
+    accident_comment: str | None = Field(None, max_length=20)
+    accident_detailed_description: str | None = Field(None, max_length=255)
 
     @field_validator('category')
     def num_is_digit(cls, v: str) -> str | None:
@@ -58,11 +57,7 @@ class DataUpload(BaseModel):
 
     @field_validator('device_num')
     def aaa(cls, v):
-        # TODO проверка номера PW/NTT
         return v
-
-
-
 
 @app.get("/check")
 def health_check():
@@ -72,28 +67,21 @@ def health_check():
 def data_tranfer():
     pass
 
-
-# ---------------- API для сайта (nginx пускает только /api) ----------------
-
 DB_DOWN = ("Нет связи с базой данных. Запись не сохранена — повторите через минуту. "
            "Если ошибка не проходит, сообщите администратору (контейнер db).")
-
 
 @app.on_event("startup")
 async def startup():
     try:
         await db.init_pool()
     except Exception:
-        pass  # база может подняться позже, пул создастся при первом запросе
+        pass
 
-
-# база недоступна -> понятный ответ 503 вместо «Internal Server Error»
 @app.exception_handler(pymysql.err.OperationalError)
 @app.exception_handler(pymysql.err.InterfaceError)
 @app.exception_handler(ConnectionError)
 async def db_down(request: Request, exc: Exception):
     return JSONResponse(status_code=503, content={"detail": DB_DOWN, "code": "db_unavailable"})
-
 
 @app.get("/api/health")
 async def api_health():
@@ -103,23 +91,16 @@ async def api_health():
         return {"api": "ok", "database": "error: нет подключения"}
     return {"api": "ok", **(await db.health())}
 
-
-# --- вход и роли ---
-# токен = данные + подпись, на сервере ничего не храним (работает и при нескольких копиях бэкенда)
-
 SECRET = os.getenv("AUTH_SECRET", "motiv-secret").encode()
 ROLE_NAMES = {"admin": "Администратор", "duty": "Дежурный", "engineer": "Инженер"}
 
-
 def sign(data: bytes) -> str:
     return hmac.new(SECRET, data, hashlib.sha256).hexdigest()
-
 
 def make_token(user):
     data = json.dumps({"u": user["USERNAME"], "r": user["ROLE"], "n": user["FULL_NAME"],
                        "exp": int(time.time()) + 12 * 3600}).encode()
     return base64.urlsafe_b64encode(data).decode() + "." + sign(data)
-
 
 def get_user(authorization: str = Header(default="")):
     try:
@@ -132,18 +113,15 @@ def get_user(authorization: str = Header(default="")):
         raise HTTPException(401, "Нужно войти заново")
     return {"username": t["u"], "role": t["r"], "full_name": t["n"]}
 
-
-def can_edit(user=Depends(get_user)):  # админ и дежурный
+def can_edit(user=Depends(get_user)):
     if user["role"] not in ("admin", "duty"):
         raise HTTPException(403, "Недостаточно прав")
     return user
-
 
 def only_admin(user=Depends(get_user)):
     if user["role"] != "admin":
         raise HTTPException(403, "Только для администратора")
     return user
-
 
 @app.post("/api/login")
 async def login(body: DataLogin):
@@ -153,24 +131,18 @@ async def login(body: DataLogin):
     return {"token": make_token(user), "username": user["USERNAME"], "role": user["ROLE"],
             "role_name": ROLE_NAMES[user["ROLE"]], "full_name": user["FULL_NAME"]}
 
-
-# --- справочники ---
-
 class DictItem(BaseModel):
     kind: str
     value: str = Field(min_length=1, max_length=128)
-
 
 @app.get("/api/dicts")
 async def dicts(user=Depends(get_user)):
     return await db.get_dicts()
 
-
 @app.get("/api/dicts/rows")
 async def dict_rows(user=Depends(only_admin)):
     kinds = {"napr": "Направление", "tehc": "ТЦ", "kateg": "Категория", "netw_type": "Тип сети", "alarm_type": "Тип аварии"}
     return {"kinds": kinds, "rows": await db.get_dict_rows()}
-
 
 @app.post("/api/dicts", status_code=201)
 async def add_dict(item: DictItem, user=Depends(only_admin)):
@@ -183,37 +155,30 @@ async def add_dict(item: DictItem, user=Depends(only_admin)):
         raise HTTPException(409, "Такое значение уже есть")
     return {"id": new_id}
 
-
 @app.delete("/api/dicts/{dict_id}")
 async def delete_dict(dict_id: int, user=Depends(only_admin)):
-    # старые аварии значение не теряют
     if not await db.delete_dict(dict_id):
         raise HTTPException(404, "Не найдено")
     return {"ok": True}
 
-
-# --- аварии ---
-
 class Alarm(BaseModel):
-    # обязательно только начало, остальное может быть пустым (не у всех аварий есть номер PW и т.д.)
     PW: str | None = Field(None, max_length=450)
     NAPR: str | None = None
     TEHC: str | None = None
     KATEG: int | None = Field(None, ge=1, le=9)
     NETW_TYPE: str | None = None
     SERV_ELEM: str | None = Field(None, max_length=450)
-    NUMB_RBS: int | None = Field(None, ge=0, le=10000)  # 0 = С (сектор)
+    NUMB_RBS: int | None = Field(None, ge=0, le=10000)
     EQIP_TYPE: str | None = Field(None, max_length=450)
     ALARM_TYPE: str | None = None
     DESCR: str | None = Field(None, max_length=450)
     BEGIN_TIME: datetime
-    END_TIME: datetime | None = None  # None = НВ
+    END_TIME: datetime | None = None
     AKB: str | None = None
     DGU: str | None = None
     PROSTOY: str | None = None
     ALARM_WHO: str | None = Field(None, max_length=450)
     DESC_NOTICE: str | None = Field(None, max_length=450)
-
 
 async def check_alarm(a: Alarm):
     data = {k: (v.strip() or None) if isinstance(v, str) else v for k, v in a.model_dump().items()}
@@ -232,13 +197,11 @@ async def check_alarm(a: Alarm):
     data["END_TIME"] = data["END_TIME"] or db.NV
     return data
 
-
 async def alarm_or_404(alarm_id):
     a = await db.get_alarm(alarm_id)
     if not a:
         raise HTTPException(404, "Авария не найдена")
     return a
-
 
 @app.get("/api/alarms")
 async def alarms(date_from: date | None = None, date_to: date | None = None, only_open: bool = False,
@@ -247,24 +210,20 @@ async def alarms(date_from: date | None = None, date_to: date | None = None, onl
     f = dict(date_from=date_from, date_to=date_to, only_open=only_open, napr=napr, tehc=tehc, alarm_type=alarm_type, q=q)
     return await db.list_alarms(f, min(limit, 5000))
 
-
 @app.get("/api/alarms/{alarm_id}")
 async def alarm(alarm_id: int, user=Depends(get_user)):
     return await alarm_or_404(alarm_id)
-
 
 @app.post("/api/alarms", status_code=201)
 async def new_alarm(a: Alarm, user=Depends(can_edit)):
     new_id = await db.add_alarm(await check_alarm(a), user["username"])
     return await db.get_alarm(new_id)
 
-
 @app.put("/api/alarms/{alarm_id}")
 async def change_alarm(alarm_id: int, a: Alarm, user=Depends(can_edit)):
     await alarm_or_404(alarm_id)
     await db.edit_alarm(alarm_id, await check_alarm(a), user["username"])
     return await db.get_alarm(alarm_id)
-
 
 @app.post("/api/alarms/{alarm_id}/close")
 async def close_alarm(alarm_id: int, user=Depends(can_edit)):
@@ -274,31 +233,24 @@ async def close_alarm(alarm_id: int, user=Depends(can_edit)):
     await db.close_alarm(alarm_id, user["username"])
     return await db.get_alarm(alarm_id)
 
-
 @app.delete("/api/alarms/{alarm_id}")
 async def remove_alarm(alarm_id: int, user=Depends(only_admin)):
     await alarm_or_404(alarm_id)
     await db.delete_alarm(alarm_id)
     return {"ok": True}
 
-
 @app.get("/api/suggest")
 async def suggest(user=Depends(get_user)):
     return await db.get_suggest()
-
 
 @app.get("/api/autofill")
 async def autofill(serv_elem: str, user=Depends(get_user)):
     return await db.get_autofill(serv_elem) or {}
 
-
-# --- отчёт CSV и статистика ---
-
 CSV_HEAD = ["№", "Номер PW/NTT", "Направление", "ТЦ", "Категория", "Тип сети", "Сетевой элемент, услуга",
             "Количество БС", "Тип оборудования", "Тип", "Описание", "Начало", "Окончание", "АКБ", "ГУ",
             "Длительность аварии", "Время перерыва связи", "Общее время простоя БС", "Уведомление (кому)",
             "Подробное описание"]
-
 
 @app.get("/api/alarms-export.csv")
 async def export_csv(date_from: date | None = None, date_to: date | None = None, only_open: bool = False,
@@ -308,7 +260,7 @@ async def export_csv(date_from: date | None = None, date_to: date | None = None,
     rows = await db.list_alarms(f, 100000, order="BEGIN_TIME")
 
     out = io.StringIO()
-    out.write("﻿")  # BOM, чтобы Excel понял кириллицу
+    out.write("﻿")
     w = csv.writer(out, delimiter=";", lineterminator="\r\n")
     w.writerow(CSV_HEAD)
     for r in rows:
@@ -327,7 +279,6 @@ async def export_csv(date_from: date | None = None, date_to: date | None = None,
     name = f"alarms_{date_from or 'all'}_{date_to or date.today()}.csv"
     return StreamingResponse(iter([out.getvalue().encode("utf-8")]), media_type="text/csv; charset=utf-8",
                              headers={"Content-Disposition": f'attachment; filename="{name}"'})
-
 
 @app.get("/api/stats")
 async def stats(date_from: date | None = None, date_to: date | None = None, user=Depends(get_user)):

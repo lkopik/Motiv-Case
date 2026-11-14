@@ -13,14 +13,13 @@ services:
     ports:
       - "${DB_PORT:-3306}:3306"
     volumes:
-      - ./db_data:/var/lib/mysql   # база лежит на хосте, переживает падение и пересоздание контейнера
+      - ./db_data:/var/lib/mysql
       - ./init_scripts:/docker-entrypoint-initdb.d:ro
     healthcheck:
       test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p$$MYSQL_ROOT_PASSWORD --silent"]
       interval: 5s
       timeout: 5s
       retries: 30
-
 
   backend:
     build: ./backend
@@ -41,7 +40,7 @@ services:
         condition: service_healthy
 
   frontend:
-    image: nginx:stable   # debian-образ (п. 3.4 ТЗ)
+    image: nginx:stable
     restart: always
     ports:
       - "${FRONTEND_PORT:-82}:80"

@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Карта — Мотив</title>
+    <link rel="icon" href="logo.png" type="image/png">
+    <link rel="stylesheet" href="style.css?v=11">
+    <script src="app.js?v=11"></script>
+</head>
+<body class="app">
+    <main class="page">
+        <div class="page-head">
+            <div>
+                <h1>Карта аварий</h1>
+                <div class="page-sub" id="sub">Работает без интернета</div>
+            </div>
+            <div class="actions">
+                <div class="quick" id="period" style="display:inline-flex">
+                    <button data-p="open" class="active">Не закрытые</button><button data-p="1">Сутки</button>
+                    <button data-p="7">7 дней</button><button data-p="30">30 дней</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="map-grid">
+            <section class="panel map-panel">
+                <div class="panel-head">
+                    <div class="filters" style="padding:0;border:none">
+                        <input id="find" class="find" placeholder="Город, ТЦ или код БС" list="places">
+                        <datalist id="places"></datalist>
+                        <button class="btn btn-sm" id="reset">Вся сеть</button>
+                    </div>
+                    <div class="map-legend">
+                        <span><i class="dot d-crit"></i>не закрыта, кат. 1</span>
+                        <span><i class="dot d-open"></i>не закрыта</span>
+                        <span><i class="dot d-closed"></i>закрыта</span>
+                    </div>
+                </div>
+                <div class="map-box">
+                    <svg id="map" viewBox="0 0 1000 720"></svg>
+                    <div class="map-tip" id="tip" hidden></div>
+                </div>
+            </section>
+
+            <aside class="panel">
+                <div class="panel-head"><div class="panel-title">Техцентры</div></div>
+                <table class="tc-table"><thead><tr><th>ТЦ</th><th>Город</th><th class="num">Открыто</th><th class="num">Всего</th></tr></thead>
+                    <tbody id="tc-list"></tbody></table>
+            </aside>
+        </div>
+    </main>
+
+    <script>
+        var M = Motiv, session = M.initPage('map.html');
+
+        var TC = {
+            'ЕКБ': ['Екатеринбург', 56.84, 60.61], 'АСБ': ['Асбест', 57.00, 61.46], 'ИРБ': ['Ирбит', 57.67, 63.07],
+            'КРТ': ['Краснотурьинск', 59.77, 60.19], 'НТГ': ['Нижний Тагил', 57.91, 59.97], 'НТР': ['Нижняя Тура', 58.62, 59.85],
+            'НУРЛ': ['Новоуральск', 57.25, 60.08], 'КМУ': ['Каменск-Уральский', 56.41, 61.92], 'НСР': ['Нижние Серги', 56.66, 59.30],
+            'КРГ': ['Курган', 55.44, 65.34], 'ШДР': ['Шадринск', 56.09, 63.63], 'СОВ': ['Советский', 61.36, 63.58],
+            'ХМН': ['Ханты-Мансийск', 61.00, 69.02], 'ОКТ': ['Октябрьское', 62.45, 66.05], 'СРГ': ['Сургут', 61.25, 73.40],
+            'НВРТ': ['Нижневартовск', 60.94, 76.57], 'НБР': ['Ноябрьск', 63.20, 75.45], 'НУРГ': ['Новый Уренгой', 66.08, 76.68],
+            'СЛХ': ['Салехард', 66.53, 66.60]
+        };
+        var REGIONS = [['ЯНАО', 65.6, 72.5], ['ХМАО — Югра', 62.6, 71.0], ['Свердловская обл.', 58.6, 61.6], ['Курганская обл.', 55.6, 63.0]];
+        var OB = [[60.9, 76.6], [61.2, 73.4], [61.1, 70.0], [61.0, 69.0], [62.2, 65.6], [64.0, 65.3], [65.8, 65.7], [66.6, 66.6], [67.4, 70.5], [68.2, 73.0]];
+
+        var LAT0 = 54.5, LAT1 = 69.0, LON0 = 57.5, LON1 = 79.5;
+        var full = '0 0 1000 720', alarms = [], points = [];
+
+        function x(lon) { return 40 + (lon - LON0) / (LON1 - LON0) * 920; }
+        function y(lat) { return 690 - (lat - LAT0) / (LAT1 - LAT0) * 660; }
+
+        function hash(text) {
+            var h = 0;
+            for (var i = 0; i < text.length; i++) h = (h * 31 + text.charCodeAt(i)) % 100000;
+            return h;
+        }
+
+        function stationPlace(a) {
+            var c = TC[a.TEHC];
+            if (!c) return null;
+            var h = hash(a.SERV_ELEM || String(a.ID));
+            var angle = h % 360 * Math.PI / 180, dist = 0.08 + (h % 37) / 100;
+            return [c[1] + Math.sin(angle) * dist * 0.5, c[2] + Math.cos(angle) * dist];
+        }
+
+        function drawBase() {
+            var s = '';
+            for (var lon = 58; lon <= 79; lon += 3) s += '<line class="grid" x1="' + x(lon) + '" y1="30" x2="' + x(lon) + '" y2="690"/>' +
+                '<text class="grid-t" x="' + (x(lon) + 3) + '" y="704">' + lon + '°</text>';
+            for (var lat = 55; lat <= 68; lat += 2) s += '<line class="grid" x1="40" y1="' + y(lat) + '" x2="960" y2="' + y(lat) + '"/>' +
+                '<text class="grid-t" x="6" y="' + (y(lat) + 4) + '">' + lat + '°</text>';
+            s += '<polyline class="river" points="' + OB.map(function (p) { return x(p[1]) + ',' + y(p[0]); }).join(' ') + '"/>';
+            s += '<text class="river-t" x="' + x(66.2) + '" y="' + y(64.6) + '">р. Обь</text>';
+            REGIONS.forEach(function (r) { s += '<text class="region" x="' + x(r[2]) + '" y="' + y(r[1]) + '">' + r[0] + '</text>'; });
+            Object.keys(TC).forEach(function (k) {
+                var c = TC[k];
+                s += '<g class="city" data-tc="' + k + '"><circle cx="' + x(c[2]) + '" cy="' + y(c[1]) + '" r="3"/>' +
+                    '<text x="' + (x(c[2]) + 6) + '" y="' + (y(c[1]) - 6) + '">' + c[0] + ' <tspan>' + k + '</tspan></text></g>';
+            });
+            return s;
+        }
+
+        function draw() {
+            var byStation = {};
+            alarms.forEach(function (a) {
+                var key = (a.SERV_ELEM || 'id' + a.ID) + '|' + a.TEHC;
+                if (!byStation[key]) byStation[key] = { list: [], place: stationPlace(a), name: a.SERV_ELEM || 'без адреса', tc: a.TEHC };
+                byStation[key].list.push(a);
+            });
+            points = Object.keys(byStation).map(function (k) { return byStation[k]; }).filter(function (p) { return p.place; });
+            var dots = points.map(function (p, i) {
+                var open = p.list.filter(function (a) { return a.IS_OPEN; });
+                var crit = open.some(function (a) { return a.KATEG === 1; });
+                var cls = crit ? 'd-crit' : open.length ? 'd-open' : 'd-closed';
+                var r = Math.min(4 + p.list.length * 1.5, 12);
+                return '<circle class="dot ' + cls + '" data-i="' + i + '" cx="' + x(p.place[1]) + '" cy="' + y(p.place[0]) + '" r="' + r + '"/>';
+            }).join('');
+            document.getElementById('map').innerHTML = drawBase() + dots;
+            drawTable();
+        }
+
+        function drawTable() {
+            var stat = {};
+            alarms.forEach(function (a) {
+                if (!stat[a.TEHC]) stat[a.TEHC] = { open: 0, all: 0 };
+                stat[a.TEHC].all++;
+                if (a.IS_OPEN) stat[a.TEHC].open++;
+            });
+            var keys = Object.keys(TC).sort(function (a, b) {
+                var sa = stat[a] || { open: 0, all: 0 }, sb = stat[b] || { open: 0, all: 0 };
+                return sb.open - sa.open || sb.all - sa.all;
+            });
+            document.getElementById('tc-list').innerHTML = keys.map(function (k) {
+                var st = stat[k] || { open: 0, all: 0 };
+                return '<tr class="clickable" data-tc="' + k + '"><td><b>' + k + '</b></td><td>' + TC[k][0] + '</td>' +
+                    '<td class="num' + (st.open ? ' text-red' : ' muted') + '">' + st.open + '</td><td class="num">' + st.all + '</td></tr>';
+            }).join('');
+        }
+
+        function zoomTo(tc) {
+            var c = TC[tc];
+            if (!c) return;
+            var w = 230, h = 165;
+            document.getElementById('map').setAttribute('viewBox', (x(c[2]) - w / 2) + ' ' + (y(c[1]) - h / 2) + ' ' + w + ' ' + h);
+            document.getElementById('map').classList.add('zoomed');
+        }
+
+        function resetZoom() {
+            document.getElementById('map').setAttribute('viewBox', full);
+            document.getElementById('map').classList.remove('zoomed');
+        }
+
+        function findPlace(text) {
+            text = text.trim().toLowerCase();
+            if (!text) return;
+            var tc = Object.keys(TC).filter(function (k) {
+                return k.toLowerCase() === text || TC[k][0].toLowerCase().indexOf(text) === 0;
+            })[0];
+            if (!tc) {
+                var p = points.filter(function (p) { return p.name.toLowerCase().indexOf(text) >= 0; })[0];
+                tc = p && p.tc;
+            }
+            if (tc) zoomTo(tc); else M.toast('Не найдено: ' + text, 'error');
+        }
+
+        function load(period) {
+            Array.prototype.forEach.call(document.querySelectorAll('#period button'), function (b) {
+                b.className = b.getAttribute('data-p') === period ? 'active' : '';
+            });
+            var q = 'limit=5000';
+            if (period === 'open') q += '&only_open=true';
+            else { var d = new Date(); d.setDate(d.getDate() - parseInt(period, 10) + 1); q += '&date_from=' + M.isoDate(d); }
+            M.api('GET', '/alarms?' + q).then(function (rows) {
+                alarms = rows;
+                var open = rows.filter(function (a) { return a.IS_OPEN; }).length;
+                document.getElementById('sub').textContent = 'Аварий на карте: ' + rows.length + ', не закрыто: ' + open + ' · работает без интернета';
+                draw();
+            }).catch(function (e) { M.toast(e.message, 'error'); });
+        }
+
+        if (session) {
+            document.getElementById('places').innerHTML = Object.keys(TC).map(function (k) {
+                return '<option value="' + TC[k][0] + '">' + k + '</option>';
+            }).join('');
+            Array.prototype.forEach.call(document.querySelectorAll('#period button'), function (b) {
+                b.onclick = function () { load(b.getAttribute('data-p')); };
+            });
+            document.getElementById('find').onchange = function () { findPlace(this.value); };
+            document.getElementById('find').onkeydown = function (e) { if (e.key === 'Enter') findPlace(this.value); };
+            document.getElementById('reset').onclick = function () { document.getElementById('find').value = ''; resetZoom(); };
+            document.getElementById('tc-list').onclick = function (e) {
+                var tr = e.target.closest('tr[data-tc]');
+                if (tr) zoomTo(tr.getAttribute('data-tc'));
+            };
+
+            var svg = document.getElementById('map'), tip = document.getElementById('tip');
+            svg.onclick = function (e) {
+                var city = e.target.closest('.city');
+                if (city) { zoomTo(city.getAttribute('data-tc')); return; }
+                var i = e.target.getAttribute('data-i');
+                if (i !== null) {
+                    var last = points[i].list[0];
+                    location.href = 'reports.html?view=' + last.ID;
+                }
+            };
+            svg.onmousemove = function (e) {
+                var i = e.target.getAttribute('data-i');
+                if (i === null) { tip.hidden = true; return; }
+                var p = points[i];
+                tip.innerHTML = '<b>' + M.esc(p.name) + '</b><br>ТЦ ' + M.esc(p.tc) + ' · аварий: ' + p.list.length +
+                    p.list.slice(0, 4).map(function (a) {
+                        return '<div>' + (a.IS_OPEN ? '<span class="nv-badge">НВ</span> ' : '') + M.esc(a.ALARM_TYPE || '') + ' — ' +
+                            M.esc(a.DESCR || '') + '<span class="muted"> · ' + M.fmtDateTime(a.BEGIN_TIME) + '</span></div>';
+                    }).join('') + '<div class="muted">нажмите, чтобы открыть</div>';
+                var box = svg.parentNode.getBoundingClientRect();
+                tip.style.left = Math.min(e.clientX - box.left + 14, box.width - 340) + 'px';
+                tip.style.top = (e.clientY - box.top + 14) + 'px';
+                tip.hidden = false;
+            };
+            svg.onmouseleave = function () { tip.hidden = true; };
+
+            load('open');
+            setInterval(function () {
+                var active = document.querySelector('#period .active');
+                load(active ? active.getAttribute('data-p') : 'open');
+            }, 30000);
+        }
+    </script>
+</body>
+</html>

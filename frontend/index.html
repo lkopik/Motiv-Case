@@ -5,9 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Аварии — Мотив</title>
     <link rel="icon" href="logo.png" type="image/png">
-    <link rel="stylesheet" href="style.css?v=10">
-    <script src="app.js?v=10"></script>
-    <script src="form.js?v=10"></script>
+    <link rel="stylesheet" href="style.css?v=11">
+    <script src="app.js?v=11"></script>
+    <script src="form.js?v=11"></script>
 </head>
 <body class="app">
     <main class="page">
@@ -70,7 +70,6 @@
             tickTimers();
         }
 
-        // Длительность незакрытых аварий растёт на глазах
         function tickTimers() {
             Array.prototype.forEach.call(document.querySelectorAll('.open-timer'), function (el) {
                 el.textContent = M.hms((new Date() - M.parseLocal(el.getAttribute('data-begin'))) / 1000);
@@ -116,7 +115,6 @@
                         form.reset();
                     }
                 });
-                // «Как прошлая»: берём поля последней аварии, время — текущее
                 document.getElementById('copy-last').onclick = function () {
                     M.api('GET', '/alarms?limit=1').then(function (rows) {
                         if (!rows.length) return;
@@ -133,7 +131,7 @@
             }
             loadOpen();
             setInterval(tickTimers, 1000);
-            setInterval(loadOpen, 30000);   // другие дежурные тоже вносят аварии
+            setInterval(loadOpen, 30000);
         }
     </script>
 </body>

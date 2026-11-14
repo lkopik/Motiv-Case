@@ -1,6 +1,3 @@
-// Общая часть всех страниц: вход, запросы к API, шапка и меню, мелкие помощники.
-// Пишем под Chrome 75: без ?. и ??, без replaceAll, без внешних библиотек и шрифтов
-// (в ЦОУ нет интернета).
 
 var Motiv = (function () {
     var KEY = 'motiv_session';
@@ -19,7 +16,6 @@ var Motiv = (function () {
         return true;
     }
 
-    // Запрос к API с токеном. Ошибку сервера превращает в понятный текст.
     function api(method, path, body) {
         var s = session();
         var opts = { method: method, headers: {}, cache: 'no-store' };
@@ -29,7 +25,6 @@ var Motiv = (function () {
             opts.body = JSON.stringify(body);
         }
         return fetch('/api' + path, opts).catch(function () {
-            // сеть или сервер совсем не отвечают
             outage('server');
             throw new Error(OUTAGE.server.text);
         }).then(function (r) {
@@ -55,7 +50,6 @@ var Motiv = (function () {
         return 'Ошибка на сервере (код ' + status + '). Повторите действие; если не помогло — сообщите администратору.';
     }
 
-    // большая плашка сверху, пока нет связи
     var OUTAGE = {
         db: { title: 'Нет связи с базой данных',
               text: 'Данные сейчас не сохраняются и не загружаются. Ничего не потеряно — повторите действие через минуту. ' +
@@ -87,18 +81,15 @@ var Motiv = (function () {
 
     function pad(n) { return (n < 10 ? '0' : '') + n; }
 
-    // Секунды → «чч:мм:сс» (часы могут быть больше 24)
     function hms(sec) {
         sec = Math.max(0, Math.floor(sec));
         return pad(Math.floor(sec / 3600)) + ':' + pad(Math.floor(sec % 3600 / 60)) + ':' + pad(sec % 60);
     }
-    // «чч:мм:сс» → секунды
     function toSec(text) {
         if (!text) return 0;
         var p = String(text).split(':');
         return (parseInt(p[0], 10) || 0) * 3600 + (parseInt(p[1], 10) || 0) * 60 + (parseInt(p[2], 10) || 0);
     }
-    // Свободный ввод → «чч:мм:сс»: «1:30» → 01:30:00, «90» (минуты) → 01:30:00
     function normalizeHms(text) {
         text = String(text || '').trim().replace(/[.,\s]/g, ':');
         if (!text) return '';
@@ -108,18 +99,17 @@ var Motiv = (function () {
         return hms(toSec(text));
     }
 
-    // «2026-11-13T08:15:00» → «13.11.2026 08:15»
     function fmtDateTime(iso) {
         if (!iso) return '';
         var d = iso.split('T');
         var ymd = d[0].split('-');
         return ymd[2] + '.' + ymd[1] + '.' + ymd[0] + ' ' + (d[1] || '').slice(0, 5);
     }
-    function parseLocal(iso) {           // время из БД — местное время ЦОУ
+    function parseLocal(iso) {
         var m = /^(\d+)-(\d+)-(\d+)T(\d+):(\d+)(?::(\d+))?/.exec(iso || '');
         return m ? new Date(+m[1], m[2] - 1, +m[3], +m[4], +m[5], +(m[6] || 0)) : null;
     }
-    function toInputValue(date) {          // Date → значение для <input type="datetime-local">
+    function toInputValue(date) {
         return date.getFullYear() + '-' + pad(date.getMonth() + 1) + '-' + pad(date.getDate()) +
             'T' + pad(date.getHours()) + ':' + pad(date.getMinutes());
     }
@@ -127,7 +117,7 @@ var Motiv = (function () {
         return date.getFullYear() + '-' + pad(date.getMonth() + 1) + '-' + pad(date.getDate());
     }
 
-    function fmtDuration(sec) {             // для статистики: «3 ч 20 мин», «2 сут 4 ч»
+    function fmtDuration(sec) {
         sec = Math.round(sec || 0);
         var d = Math.floor(sec / 86400), h = Math.floor(sec % 86400 / 3600), m = Math.floor(sec % 3600 / 60);
         if (d) return d + ' сут ' + h + ' ч';
@@ -153,13 +143,13 @@ var Motiv = (function () {
 
     var PAGES = [
         { href: 'index.html', title: 'Аварии' },
-        { href: 'reports.html', title: 'Отчётность' },
+        { href: 'reports.html', title: 'Архив' },
         { href: 'stats.html', title: 'Статистика' },
-        { href: 'dicts.html', title: 'Справочники', admin: true },
+        { href: 'map.html', title: 'Карта' },
+        { href: 'dicts.html', title: 'Списки', admin: true },
         { href: 'help.html', title: 'Справка' },
     ];
 
-    // смена ЦОУ: дневная 08–20, ночная 20–08
     function shiftText(d) {
         var day = d.getHours() >= 8 && d.getHours() < 20;
         var start = new Date(d);
@@ -168,7 +158,6 @@ var Motiv = (function () {
             (day ? ', 08:00–20:00' : ', 20:00–08:00');
     }
 
-    // шапка + строка состояния внизу. Без входа — на login
     function initPage(active) {
         var s = session();
         if (!s) { location.replace('login.html'); return null; }
@@ -224,7 +213,6 @@ var Motiv = (function () {
         return s;
     }
 
-    // Загрузка CSV с токеном: обычной ссылкой нельзя — нужен заголовок авторизации
     function download(path, filename) {
         return api('GET', path).then(function (blob) {
             var url = URL.createObjectURL(blob);

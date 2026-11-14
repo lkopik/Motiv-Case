@@ -1,9 +1,7 @@
-// Форма аварии (19 полей ТЗ). Одна и та же форма — для новой аварии и для правки строки в отчётности.
-//   AlarmForm.create(container, { alarm, readonly, onSaved, onCancel }) → объект с .fill(alarm), .reset()
 
 var AlarmForm = (function () {
     var M = Motiv;
-    var cache = {};   // справочники и подсказки грузим один раз на страницу
+    var cache = {};
 
     function loadRefs() {
         if (!cache.refs) {
@@ -19,7 +17,7 @@ var AlarmForm = (function () {
             return '<option value="' + M.esc(v) + '">' + M.esc(v) + '</option>';
         }).join('');
     }
-    function chips(name, values) {      // выбор из 2–4 вариантов — кнопками, а не списком
+    function chips(name, values) {
         return '<div class="chips" data-name="' + name + '">' + values.map(function (v) {
             return '<label><input type="radio" name="' + name + '" value="' + M.esc(v) + '"><span>' + M.esc(v) + '</span></label>';
         }).join('') + '</div>';
@@ -43,8 +41,9 @@ var AlarmForm = (function () {
           '<div class="f"><span><i class="n">4</i>Категория</span>' + chips('KATEG', d.kateg) + '</div>' +
           '<div class="f"><span><i class="n">5</i>Тип сети</span>' + chips('NETW_TYPE', d.netw_type) + '</div>' +
 
-          '<label class="f c-2"><span><i class="n">6</i>Сетевой элемент, услуга <em class="hint" data-hint="autofill"></em></span>' +
-            '<input name="SERV_ELEM" list="serv-' + uid + '" placeholder="код / адрес БС"></label>' +
+          '<label class="f c-2"><span><i class="n">6</i>Сетевой элемент, услуга</span>' +
+            '<input name="SERV_ELEM" list="serv-' + uid + '" placeholder="код / адрес БС">' +
+            '<small class="hint" data-hint="autofill"></small></label>' +
           '<div class="f c-2"><span><i class="n">7</i>Количество БС</span><div class="bs-count">' +
             '<input name="NUMB_RBS" type="number" min="1" max="10000" placeholder="1">' +
             '<label class="check"><input type="checkbox" name="SECTOR"> С (сектор)</label></div></div>' +
@@ -80,11 +79,10 @@ var AlarmForm = (function () {
           '<span class="audit" data-out="AUDIT"></span>' +
         '</div>' +
         '</form>' +
-        datalist('serv-' + uid, s.SERV_ELEM) + datalist('eqip-' + uid, s.EQIP_TYPE) +
-        datalist('descr-' + uid, s.DESCR) + datalist('who-' + uid, s.ALARM_WHO);
+        datalist('serv-' + uid, []) + datalist('eqip-' + uid, []) +
+        datalist('descr-' + uid, []) + datalist('who-' + uid, []);
     }
 
-    // пояснения к полям (по ТЗ) — всплывают при наведении на «?»
     var HELP = {
         PW: 'Номер заявки NTT/PW в CRM. Можно оставить пустым, если заявки нет.',
         NAPR: 'Территориальное направление: ХМЯН, СВН, ЮЗН или «Вся сеть».',
@@ -114,6 +112,19 @@ var AlarmForm = (function () {
 
         api.ready = loadRefs().then(function (refs) {
             container.innerHTML = template(uid, refs);
+            var LISTS = { SERV_ELEM: 'serv-', EQIP_TYPE: 'eqip-', DESCR: 'descr-', ALARM_WHO: 'who-' };
+            Object.keys(LISTS).forEach(function (name) {
+                var input = container.querySelector('[name="' + name + '"]');
+                var list = container.querySelector('#' + LISTS[name] + uid);
+                input.addEventListener('input', function () {
+                    var text = input.value.trim().toLowerCase();
+                    var found = text.length < 2 ? [] : refs.suggest[name].filter(function (v) {
+                        return v.toLowerCase().indexOf(text) >= 0;
+                    }).slice(0, 10);
+                    list.innerHTML = found.map(function (v) { return '<option value="' + M.esc(v) + '">'; }).join('');
+                });
+            });
+
             Object.keys(HELP).forEach(function (name) {
                 var input = container.querySelector('[name="' + name + '"]');
                 var label = input && input.closest('.f');
@@ -123,7 +134,7 @@ var AlarmForm = (function () {
             var form = container.querySelector('form');
             var el = function (name) { return form.elements[name]; };
             var out = function (name) { return form.querySelector('[data-out="' + name + '"]'); };
-            var current = null;    // авария, которую правим (null — новая)
+            var current = null;
 
             function radio(name, value) {
                 var inputs = form.querySelectorAll('input[name="' + name + '"]');
@@ -148,7 +159,6 @@ var AlarmForm = (function () {
                 recalc();
             }
 
-            // Поля 15 и 17 считаются сразу при вводе — по тем же правилам, что и на сервере
             function recalc() {
                 var begin = M.parseLocal(el('BEGIN_TIME').value);
                 var end = el('NV').checked ? new Date() : M.parseLocal(el('END_TIME').value);
@@ -231,7 +241,7 @@ var AlarmForm = (function () {
                 btn.disabled = true;
                 var req = current ? M.api('PUT', '/alarms/' + current.ID, data) : M.api('POST', '/alarms', data);
                 req.then(function (saved) {
-                    cache.refs = null;   // новые значения попадут в подсказки
+                    cache.refs = null;
                     M.toast(current ? 'Изменения сохранены' : 'Авария № ' + saved.ID + ' зарегистрирована');
                     if (opts.onSaved) opts.onSaved(saved, !current);
                     if (!current) fill(null);
@@ -239,7 +249,6 @@ var AlarmForm = (function () {
                   .then(function () { btn.disabled = false; });
             }
 
-            // Подсказка дежурному: выбрали элемент из прошлых аварий — подставляем ТЦ, сеть, оборудование
             function autofill() {
                 var v = el('SERV_ELEM').value.trim();
                 if (!v || current) return;
@@ -256,7 +265,7 @@ var AlarmForm = (function () {
                     }
                     if (!el('ALARM_WHO').value && a.ALARM_WHO) { el('ALARM_WHO').value = a.ALARM_WHO; filled.push('кому'); }
                     if (filled.length) {
-                        form.querySelector('[data-hint="autofill"]').textContent = 'заполнено по аварии на этом объекте: ' + filled.join(', ');
+                        form.querySelector('[data-hint="autofill"]').textContent = 'Подставлено по прошлой аварии: ' + filled.join(', ');
                         recalc();
                     }
                 });

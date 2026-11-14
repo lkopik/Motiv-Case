@@ -3,18 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Отчётность — Мотив</title>
+    <title>Архив — Мотив</title>
     <link rel="icon" href="logo.png" type="image/png">
-    <link rel="stylesheet" href="style.css?v=10">
-    <script src="app.js?v=10"></script>
-    <script src="form.js?v=10"></script>
+    <link rel="stylesheet" href="style.css?v=11">
+    <script src="app.js?v=11"></script>
+    <script src="form.js?v=11"></script>
 </head>
 <body class="app">
     <main class="page">
         <div class="page-head">
             <div>
-                <h1>Отчётность</h1>
-                <div class="page-sub" id="sub">Журнал аварий за период</div>
+                <h1>Архив</h1>
+                <div class="page-sub" id="sub">Все аварии за выбранный период</div>
             </div>
             <div class="actions">
                 <button class="btn btn-primary" id="csv">Выгрузить CSV</button>
@@ -37,7 +37,8 @@
                 <label class="f wide"><span>Поиск</span><input type="search" id="q" placeholder="PW, адрес, оборудование, текст"></label>
                 <label class="check" style="height:34px"><input type="checkbox" id="open"> только НВ</label>
             </div>
-            <div class="table-wrap">
+            <div class="top-scroll" id="top-scroll"><div></div></div>
+            <div class="table-wrap" id="table-wrap">
                 <table class="report-table">
                     <thead><tr>
                         <th></th><th class="num">№</th><th>PW/NTT</th><th>Напр.</th><th>ТЦ</th><th>Кат.</th><th>Сеть</th>
@@ -69,7 +70,6 @@
     <script>
         var M = Motiv, session = M.initPage('reports.html');
         var rows = [], form, openedId = null;
-        // сортировка по клику на заголовок: ключи в порядке столбцов таблицы
         var KEYS = [null, 'ID', 'PW', 'NAPR', 'TEHC', 'KATEG', 'NETW_TYPE', 'SERV_ELEM', 'NUMB_RBS', 'EQIP_TYPE', 'ALARM_TYPE', 'DESCR',
                     'BEGIN_TIME', 'END_TIME', 'AKB', 'DGU', 'LENGHT', 'PROSTOY', 'COMMON_PROSTOY', 'ALARM_WHO', 'DESC_NOTICE', 'CREATED_BY'];
         var TIMES = ['AKB', 'DGU', 'LENGHT', 'PROSTOY', 'COMMON_PROSTOY'];
@@ -79,7 +79,7 @@
             if (!sortKey) return;
             rows.sort(function (a, b) {
                 var x = a[sortKey], y = b[sortKey];
-                if (TIMES.indexOf(sortKey) >= 0) { x = M.toSec(x); y = M.toSec(y); }   // 123:00:00 > 09:00:00
+                if (TIMES.indexOf(sortKey) >= 0) { x = M.toSec(x); y = M.toSec(y); }
                 if (x === null || x === undefined || x === '') return 1;
                 if (y === null || y === undefined || y === '') return -1;
                 return (x > y ? 1 : x < y ? -1 : 0) * sortDir;
@@ -146,12 +146,17 @@
                 (open ? ', не закрыто: ' + open : '') + '</td><td class="mono">' + M.hms(totalSec) + '</td><td colspan="3"></td></tr>';
         }
 
+        function syncScroll() {
+            var top = document.getElementById('top-scroll'), wrap = document.getElementById('table-wrap');
+            top.firstChild.style.width = wrap.scrollWidth + 'px';
+            top.style.display = wrap.scrollWidth > wrap.clientWidth ? 'block' : 'none';
+        }
+
         function load() {
-            M.api('GET', '/alarms?' + query()).then(function (r) { rows = r; render(); })
+            M.api('GET', '/alarms?' + query()).then(function (r) { rows = r; render(); syncScroll(); })
                 .catch(function (e) { M.toast(e.message, 'error'); });
         }
 
-        // full = открыть на весь экран (кнопка «Просмотр»)
         function setFull(on) {
             document.getElementById('modal').classList.toggle('full', on);
             document.getElementById('full').textContent = on ? 'Обычный размер' : 'На весь экран';
@@ -230,6 +235,10 @@
                     render();
                 };
             });
+            var topBar = document.getElementById('top-scroll'), wrap = document.getElementById('table-wrap');
+            topBar.onscroll = function () { wrap.scrollLeft = topBar.scrollLeft; };
+            wrap.onscroll = function () { topBar.scrollLeft = wrap.scrollLeft; };
+            window.addEventListener('resize', syncScroll);
             setPeriod('week');
             var m = /[?&]view=(\d+)/.exec(location.search);
             if (m) openModal(m[1], true);
