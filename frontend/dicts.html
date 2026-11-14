@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Списки — Мотив</title>
+    <link rel="icon" href="logo.png" type="image/png">
+    <link rel="stylesheet" href="style.css?v=17">
+    <script src="app.js?v=17"></script>
+</head>
+<body class="app">
+    <main class="page">
+        <div class="page-head">
+            <div>
+                <h1>Списки</h1>
+                <div class="page-sub">Значения выпадающих списков формы аварии</div>
+            </div>
+        </div>
+        <div class="grid-2" id="kinds" style="margin-top:0"></div>
+    </main>
+
+    <script>
+        var M = Motiv, session = M.initPage('dicts.html');
+
+        function load() {
+            M.api('GET', '/dicts/rows').then(function (d) {
+                document.getElementById('kinds').innerHTML = Object.keys(d.kinds).map(function (kind) {
+                    var items = d.rows.filter(function (r) { return r.KIND === kind; });
+                    return '<section class="panel">' +
+                        '<div class="panel-head"><div class="panel-title">' + M.esc(d.kinds[kind]) + ' <small>' + items.length + '</small></div></div>' +
+                        '<table><tbody>' + items.map(function (r) {
+                            return '<tr><td><b>' + M.esc(r.VALUE) + '</b></td>' +
+                                '<td class="muted" style="font-size:12px">' + (r.USED ? 'в авариях: ' + r.USED : 'не используется') + '</td>' +
+                                '<td class="num"><button class="btn btn-sm btn-danger" data-del="' + r.ID + '" data-name="' + M.esc(r.VALUE) +
+                                '" data-used="' + r.USED + '">Убрать</button></td></tr>';
+                        }).join('') + '</tbody></table>' +
+                        '<form class="filters" data-kind="' + kind + '" style="border-top:1px solid var(--line);border-bottom:none">' +
+                        '<input name="value" placeholder="Новое значение" style="flex:1;margin-right:8px">' +
+                        '<button class="btn btn-primary">Добавить</button></form>' +
+                        '</section>';
+                }).join('');
+            }).catch(function (e) { M.toast(e.message, 'error'); });
+        }
+
+        if (session) {
+            if (!M.can('admin')) {
+                document.getElementById('kinds').innerHTML = '<div class="empty">Списки меняет только администратор</div>';
+            } else {
+                var box = document.getElementById('kinds');
+                box.onsubmit = function (e) {
+                    e.preventDefault();
+                    var f = e.target, v = f.elements.value.value.trim();
+                    if (!v) return;
+                    M.api('POST', '/dicts', { kind: f.getAttribute('data-kind'), value: v }).then(function () {
+                        M.toast('Добавлено: ' + v); load();
+                    }).catch(function (x) { M.toast(x.message, 'error'); });
+                };
+                box.onclick = function (e) {
+                    var id = e.target.getAttribute('data-del');
+                    if (!id) return;
+                    var used = +e.target.getAttribute('data-used');
+                    var msg = 'Убрать «' + e.target.getAttribute('data-name') + '» из списка?' +
+                        (used ? '\nВ ' + used + ' прошлых авариях значение сохранится, но для новых выбрать его будет нельзя.' : '');
+                    if (!confirm(msg)) return;
+                    M.api('DELETE', '/dicts/' + id).then(function () { M.toast('Убрано'); load(); })
+                        .catch(function (x) { M.toast(x.message, 'error'); });
+                };
+                load();
+            }
+        }
+    </script>
+</body>
+</html>

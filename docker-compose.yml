@@ -1,25 +1,19 @@
-# Веб-отчётность по авариям сети (кейс «Мотив»)
-# Запуск:          docker compose up -d --build
-# Масштабирование: docker compose up -d --scale backend=3   (nginx сам раздаёт запросы по копиям)
-
 services:
-  # MariaDB 10.1 — требование ТЗ, порт 3306
   db:
     image: mariadb:10.1
     restart: always
     environment:
       MYSQL_ROOT_PASSWORD: ${DB_PASSWORD:-motivchik_qwe}
       MYSQL_DATABASE: ${DB_NAME:-logs_of_db}
-    # utf8mb4 — чтобы русский текст хранился без «кракозябр»;
-    # NO_ENGINE_SUBSTITUTION без строгого режима — разрешает нулевую дату для «НВ» (настоящее время)
     command: >
       --character-set-server=utf8mb4
       --collation-server=utf8mb4_unicode_ci
       --sql-mode=NO_ENGINE_SUBSTITUTION
+      --default-time-zone=${DB_TZ:-+05:00}
     ports:
       - "${DB_PORT:-3306}:3306"
     volumes:
-      - alarms_db:/var/lib/mysql
+      - ./db_data:/var/lib/mysql
       - ./init_scripts:/docker-entrypoint-initdb.d:ro
     healthcheck:
       test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p$$MYSQL_ROOT_PASSWORD --silent"]
@@ -27,8 +21,6 @@ services:
       timeout: 5s
       retries: 30
 
-  # FastAPI. Порт наружу не пробрасываем — к бэкенду ходят через nginx,
-  # поэтому можно запускать несколько копий (--scale backend=N)
   backend:
     build: ./backend
     restart: always
@@ -47,9 +39,8 @@ services:
       db:
         condition: service_healthy
 
-  # nginx: раздаёт фронтенд и проксирует /api на бэкенд
   frontend:
-    image: nginx:alpine
+    image: nginx:stable
     restart: always
     ports:
       - "${FRONTEND_PORT:-82}:80"
@@ -59,5 +50,3 @@ services:
     depends_on:
       - backend
 
-volumes:
-  alarms_db:

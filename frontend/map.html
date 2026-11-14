@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Карта — Мотив</title>
+    <link rel="icon" href="logo.png" type="image/png">
+    <link rel="stylesheet" href="vendor/leaflet/leaflet.css">
+    <link rel="stylesheet" href="style.css?v=17">
+    <script src="vendor/leaflet/leaflet.js"></script>
+    <script src="app.js?v=17"></script>
+</head>
+<body class="app">
+    <main class="page">
+        <div class="page-head">
+            <div>
+                <h1>Карта аварий</h1>
+                <div class="page-sub" id="sub"></div>
+            </div>
+            <div class="actions">
+                <div class="quick" id="period" style="display:inline-flex">
+                    <button data-p="open" class="active">Не закрытые</button><button data-p="1">Сутки</button>
+                    <button data-p="7">7 дней</button><button data-p="30">30 дней</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="map-grid">
+            <section class="panel">
+                <div class="panel-head">
+                    <div class="map-search">
+                        <input id="find" placeholder="Город, ТЦ или код БС" list="places">
+                        <datalist id="places"></datalist>
+                        <button class="btn btn-sm" id="find-btn">Найти</button>
+                        <button class="btn btn-sm" id="reset">Вся сеть</button>
+                    </div>
+                    <div class="map-legend">
+                        <span><i class="dot d-crit"></i>не закрыта, кат. 1</span>
+                        <span><i class="dot d-open"></i>не закрыта</span>
+                        <span><i class="dot d-closed"></i>закрыта</span>
+                    </div>
+                </div>
+                <div class="map-offline" id="offline" hidden>
+                    Нет связи с сервером карт — подложка не загружается. Аварии, города и техцентры показаны поверх сетки.
+                </div>
+                <div id="map"></div>
+            </section>
+
+            <aside class="panel">
+                <div class="panel-head"><div class="panel-title">Техцентры</div></div>
+                <table class="tc-table">
+                    <thead><tr><th>ТЦ</th><th>Город</th><th class="num">Открыто</th><th class="num">Всего</th></tr></thead>
+                    <tbody id="tc-list"></tbody>
+                </table>
+            </aside>
+        </div>
+    </main>
+
+    <script>
+        var M = Motiv, session = M.initPage('map.html');
+
+        var TC = {
+            'ЕКБ': ['Екатеринбург', 56.84, 60.61], 'АСБ': ['Асбест', 57.00, 61.46], 'ИРБ': ['Ирбит', 57.67, 63.07],
+            'КРТ': ['Краснотурьинск', 59.77, 60.19], 'НТГ': ['Нижний Тагил', 57.91, 59.97], 'НТР': ['Нижняя Тура', 58.62, 59.85],
+            'НУРЛ': ['Новоуральск', 57.25, 60.08], 'КМУ': ['Каменск-Уральский', 56.41, 61.92], 'НСР': ['Нижние Серги', 56.66, 59.30],
+            'КРГ': ['Курган', 55.44, 65.34], 'ШДР': ['Шадринск', 56.09, 63.63], 'СОВ': ['Советский', 61.36, 63.58],
+            'ХМН': ['Ханты-Мансийск', 61.00, 69.02], 'ОКТ': ['Октябрьское', 62.45, 66.05], 'СРГ': ['Сургут', 61.25, 73.40],
+            'НВРТ': ['Нижневартовск', 60.94, 76.57], 'НБР': ['Ноябрьск', 63.20, 75.45], 'НУРГ': ['Новый Уренгой', 66.08, 76.68],
+            'СЛХ': ['Салехард', 66.53, 66.60]
+        };
+        var NETWORK = [[55.0, 58.5], [67.2, 78.0]];
+
+        var map, dotsLayer, alarms = [], tileErrors = 0;
+
+        function hash(text) {
+            var h = 0;
+            for (var i = 0; i < text.length; i++) h = (h * 31 + text.charCodeAt(i)) % 100000;
+            return h;
+        }
+
+        function stationPlace(alarm) {
+            var city = TC[alarm.TEHC];
+            if (!city) return null;
+            var h = hash(alarm.SERV_ELEM || String(alarm.ID));
+            var angle = h % 360 * Math.PI / 180;
+            var dist = 0.05 + (h % 41) / 300;
+            return [city[1] + Math.sin(angle) * dist * 0.55, city[2] + Math.cos(angle) * dist];
+        }
+
+        function createMap() {
+            map = L.map('map', { zoomControl: true, attributionControl: true }).fitBounds(NETWORK);
+            map.attributionControl.setPrefix(false);
+            map.on('zoomend', showLabels);
+            showLabels();
+            var tiles = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                maxZoom: 17, attribution: '&copy; участники OpenStreetMap'
+            }).addTo(map);
+            tiles.on('tileerror', function () {
+                tileErrors++;
+                if (tileErrors > 3) {
+                    document.getElementById('offline').hidden = false;
+                    document.getElementById('map').classList.add('no-tiles');
+                }
+            });
+            tiles.on('tileload', function () {
+                tileErrors = 0;
+                document.getElementById('offline').hidden = true;
+                document.getElementById('map').classList.remove('no-tiles');
+            });
+
+            Object.keys(TC).forEach(function (code) {
+                var city = TC[code];
+                L.marker([city[1], city[2]], {
+                    icon: L.divIcon({ className: 'tc-label', html: '<i></i><span>' + city[0] + ' </span><b>' + code + '</b>', iconSize: null })
+                }).addTo(map).on('click', function () { zoomTo(code); });
+            });
+            dotsLayer = L.layerGroup().addTo(map);
+        }
+
+        function showLabels() {
+            var box = document.getElementById('map');
+            box.classList.toggle('labels-short', map.getZoom() < 7);
+        }
+
+        function dotColor(list) {
+            var open = list.filter(function (a) { return a.IS_OPEN; });
+            if (open.some(function (a) { return a.KATEG === 1; })) return '#c3291c';
+            if (open.length) return '#e8891e';
+            return '#8f8c84';
+        }
+
+        function popupHtml(name, code, list) {
+            var rows = list.slice(0, 5).map(function (a) {
+                return '<tr><td>' + (a.IS_OPEN ? '<span class="nv-badge">НВ</span>' : '') + '</td><td><b>' + M.esc(a.ALARM_TYPE || '') + '</b> ' +
+                    M.esc(a.DESCR || '') + '<div class="muted">' + M.fmtDateTime(a.BEGIN_TIME) + ' · ' + M.esc(a.LENGHT || '') + '</div></td>' +
+                    '<td><a href="reports.html?view=' + a.ID + '">открыть</a></td></tr>';
+            }).join('');
+            return '<div class="map-popup"><b>' + M.esc(name) + '</b><div class="muted">ТЦ ' + M.esc(code) + ' · аварий: ' + list.length + '</div>' +
+                '<table>' + rows + '</table></div>';
+        }
+
+        function drawDots() {
+            dotsLayer.clearLayers();
+            var stations = {};
+            alarms.forEach(function (a) {
+                var key = (a.SERV_ELEM || 'id' + a.ID) + '|' + a.TEHC;
+                if (!stations[key]) stations[key] = { name: a.SERV_ELEM || 'без адреса', code: a.TEHC, place: stationPlace(a), list: [] };
+                stations[key].list.push(a);
+            });
+            Object.keys(stations).forEach(function (key) {
+                var st = stations[key];
+                if (!st.place) return;
+                L.circleMarker(st.place, {
+                    radius: Math.min(6 + st.list.length * 2, 16), color: '#fff', weight: 2,
+                    fillColor: dotColor(st.list), fillOpacity: .9
+                }).bindPopup(popupHtml(st.name, st.code, st.list), { maxWidth: 380 }).addTo(dotsLayer);
+            });
+            drawTable();
+        }
+
+        function drawTable() {
+            var stat = {};
+            alarms.forEach(function (a) {
+                if (!stat[a.TEHC]) stat[a.TEHC] = { open: 0, all: 0 };
+                stat[a.TEHC].all++;
+                if (a.IS_OPEN) stat[a.TEHC].open++;
+            });
+            var empty = { open: 0, all: 0 };
+            var codes = Object.keys(TC).sort(function (a, b) {
+                var sa = stat[a] || empty, sb = stat[b] || empty;
+                return sb.open - sa.open || sb.all - sa.all;
+            });
+            document.getElementById('tc-list').innerHTML = codes.map(function (code) {
+                var st = stat[code] || empty;
+                return '<tr class="clickable" data-tc="' + code + '"><td><b>' + code + '</b></td><td>' + TC[code][0] + '</td>' +
+                    '<td class="num' + (st.open ? ' text-red' : ' muted') + '">' + st.open + '</td><td class="num">' + st.all + '</td></tr>';
+            }).join('');
+        }
+
+        function zoomTo(code) {
+            var city = TC[code];
+            if (city) map.flyTo([city[1], city[2]], 10, { duration: 0.8 });
+        }
+
+        function findPlace() {
+            var text = document.getElementById('find').value.trim().toLowerCase();
+            if (!text) return;
+            var code = Object.keys(TC).filter(function (c) {
+                return c.toLowerCase() === text || TC[c][0].toLowerCase().indexOf(text) === 0;
+            })[0];
+            if (code) { zoomTo(code); return; }
+            var found = alarms.filter(function (a) { return (a.SERV_ELEM || '').toLowerCase().indexOf(text) >= 0; })[0];
+            if (found && stationPlace(found)) { map.flyTo(stationPlace(found), 12, { duration: 0.8 }); return; }
+            M.toast('Ничего не найдено: ' + text, 'error');
+        }
+
+        function load(period) {
+            Array.prototype.forEach.call(document.querySelectorAll('#period button'), function (b) {
+                b.className = b.getAttribute('data-p') === period ? 'active' : '';
+            });
+            var q = 'limit=5000';
+            if (period === 'open') {
+                q += '&only_open=true';
+            } else {
+                var d = new Date();
+                d.setDate(d.getDate() - parseInt(period, 10) + 1);
+                q += '&date_from=' + M.isoDate(d);
+            }
+            M.api('GET', '/alarms?' + q).then(function (rows) {
+                alarms = rows;
+                var open = rows.filter(function (a) { return a.IS_OPEN; }).length;
+                document.getElementById('sub').textContent = 'Аварий на карте: ' + rows.length + ', не закрыто: ' + open;
+                drawDots();
+            }).catch(function (e) { M.toast(e.message, 'error'); });
+        }
+
+        if (session) {
+            createMap();
+            document.getElementById('places').innerHTML = Object.keys(TC).map(function (c) {
+                return '<option value="' + TC[c][0] + '">' + c + '</option>';
+            }).join('');
+            document.getElementById('find-btn').onclick = findPlace;
+            document.getElementById('find').onkeydown = function (e) { if (e.key === 'Enter') findPlace(); };
+            document.getElementById('reset').onclick = function () {
+                document.getElementById('find').value = '';
+                map.flyToBounds(NETWORK, { duration: 0.8 });
+            };
+            document.getElementById('tc-list').onclick = function (e) {
+                var tr = e.target.closest('tr[data-tc]');
+                if (tr) zoomTo(tr.getAttribute('data-tc'));
+            };
+            Array.prototype.forEach.call(document.querySelectorAll('#period button'), function (b) {
+                b.onclick = function () { load(b.getAttribute('data-p')); };
+            });
+            load('open');
+            setInterval(function () {
+                var active = document.querySelector('#period .active');
+                load(active ? active.getAttribute('data-p') : 'open');
+            }, 30000);
+        }
+    </script>
+</body>
+</html>

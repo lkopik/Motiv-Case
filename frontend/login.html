@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Вход — Мотив</title>
+    <link rel="icon" href="logo.png" type="image/png">
+    <link rel="stylesheet" href="style.css?v=17">
+    <script src="app.js?v=17"></script>
+</head>
+<body class="login-page">
+    <div class="login2">
+        <div class="login2-head">
+            <img src="logo.png" alt="">
+            <div><b>мотив</b><span>Центр оперативного управления</span></div>
+        </div>
+        <main class="login-main">
+            <form class="login-form" id="form">
+                <div class="login2-title">Журнал аварий · вход</div>
+                <div class="form-error" id="error" hidden style="margin:12px 0 0"></div>
+                <label class="f"><span>Логин</span><input id="username" autocomplete="username" autofocus required></label>
+                <label class="f"><span>Пароль</span><input id="password" type="password" autocomplete="current-password" required></label>
+                <button class="btn btn-primary" id="submit">Войти</button>
+                <table class="demo-tbl">
+                    <tr><th colspan="3">Тестовые учётные записи</th></tr>
+                    <tr data-u="admin"><td>admin</td><td>admin123</td><td>администратор</td></tr>
+                    <tr data-u="duty"><td>duty</td><td>duty123</td><td>дежурный</td></tr>
+                    <tr data-u="engineer"><td>engineer</td><td>engineer123</td><td>инженер</td></tr>
+                </table>
+            </form>
+        </main>
+    </div>
+
+    <script>
+        if (Motiv.session()) location.replace('index.html');
+
+        Array.prototype.forEach.call(document.querySelectorAll('[data-u]'), function (b) {
+            b.onclick = function () {
+                document.getElementById('username').value = b.getAttribute('data-u');
+                document.getElementById('password').value = b.getAttribute('data-u') + '123';
+                document.getElementById('submit').focus();
+            };
+        });
+
+        document.getElementById('form').onsubmit = function (e) {
+            e.preventDefault();
+            var btn = document.getElementById('submit'), err = document.getElementById('error');
+            btn.disabled = true;
+            btn.textContent = 'Проверяем…';
+            err.hidden = true;
+            Motiv.api('POST', '/login', {
+                username: document.getElementById('username').value,
+                password: document.getElementById('password').value
+            }).then(function (s) {
+                Motiv.setSession(s);
+                location.href = 'index.html';
+            }).catch(function (x) {
+                err.textContent = x.message;
+                err.hidden = false;
+                btn.disabled = false;
+                btn.textContent = 'Войти';
+            });
+        };
+    </script>
+</body>
+</html>

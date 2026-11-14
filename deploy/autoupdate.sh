@@ -1,7 +1,5 @@
 #!/usr/bin/env bash
 
-#   cd ~/motiv-case && bash deploy/autoupdate.sh [ветка] [минуты]
-
 BRANCH=${1:-test}
 MINUTES=${2:-5}
 export COMPOSE_BAKE=false
@@ -9,7 +7,6 @@ cd "$(dirname "$0")/.." || exit 1
 
 log() { echo "[$(date +%H:%M:%S)] $*"; }
 
-# IP ноутбука в сети Wi-Fi; имя интерфейса можно переопределить: IFACE=wlp2s0 bash deploy/autoupdate.sh
 IFACE=${IFACE:-wlan0}
 host_ip() {
     ip -4 -o addr show "$IFACE" 2>/dev/null | awk '{print $4}' | cut -d/ -f1 | head -1 | grep . \
@@ -17,11 +14,10 @@ host_ip() {
 }
 
 deploy() {
+    docker compose down
     if [ "$1" = reset ]; then
-        log "Изменился init_scripts — пересоздаю базу"
-        docker compose down -v
-    else
-        docker compose down
+        log "Изменился init_scripts. Чтобы применить, пересоздайте базу вручную:"
+        log "  docker compose down && sudo rm -rf db_data && docker compose up -d"
     fi
     if docker compose up -d --build; then log "Готово: http://$(host_ip):82"; else log "ОШИБКА сборки — смотрите вывод выше"; fi
 }
