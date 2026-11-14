@@ -48,7 +48,7 @@
         function renderOpen() {
             var list = document.getElementById('open-list');
             document.getElementById('open-count').textContent = openAlarms.length ? openAlarms.length : '';
-            document.getElementById('sub').textContent = M.shiftText(new Date()) + ' · не закрыто: ' + openAlarms.length;
+            document.getElementById('sub').textContent = 'Не закрыто аварий: ' + openAlarms.length;
             if (!openAlarms.length) {
                 list.innerHTML = '<li class="empty">Незакрытых аварий нет</li>';
                 return;

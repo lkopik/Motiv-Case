@@ -34,16 +34,16 @@ app = FastAPI(title="Веб-отчётность", version="1.0.0", lifespan=lif
 class DataUpload(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 
-    device_num: str | None = Field(None, alias="PW", max_length=450)
+    device_num: str | None = Field(None, alias="PW", max_length=12)
     direction: str | None = Field(None, alias="NAPR")
     tech_center: str | None = Field(None, alias="TEHC")
     category: int | None = Field(None, alias="KATEG", ge=1, le=9)
     network_type: str | None = Field(None, alias="NETW_TYPE")
-    network_element: str | None = Field(None, alias="SERV_ELEM", max_length=450)
+    network_element: str | None = Field(None, alias="SERV_ELEM", max_length=50)
     total_base_station: int | None = Field(None, alias="NUMB_RBS", ge=0, le=10000)
-    element_type: str | None = Field(None, alias="EQIP_TYPE", max_length=450)
+    element_type: str | None = Field(None, alias="EQIP_TYPE", max_length=50)
     type: str | None = Field(None, alias="ALARM_TYPE")
-    description: str | None = Field(None, alias="DESCR", max_length=450)
+    description: str | None = Field(None, alias="DESCR", max_length=300)
     start_time: datetime = Field(alias="BEGIN_TIME")
     end_time: datetime | None = Field(None, alias="END_TIME")
     lifetime_by_battery: str | None = Field(None, alias="AKB")
@@ -51,8 +51,8 @@ class DataUpload(BaseModel):
     time_accident: str | None = Field(None, alias="LENGHT")
     time_connection_interupt: str | None = Field(None, alias="PROSTOY")
     base_station_downtime: str | None = Field(None, alias="COMMON_PROSTOY")
-    accident_comment: str | None = Field(None, alias="ALARM_WHO", max_length=450)
-    accident_detailed_description: str | None = Field(None, alias="DESC_NOTICE", max_length=450)
+    accident_comment: str | None = Field(None, alias="ALARM_WHO", max_length=300)
+    accident_detailed_description: str | None = Field(None, alias="DESC_NOTICE", max_length=400)
 
 
 class DictItem(BaseModel):

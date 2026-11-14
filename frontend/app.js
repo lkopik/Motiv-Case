@@ -154,14 +154,6 @@ var Motiv = (function () {
         { href: 'help.html', title: 'Справка' },
     ];
 
-    function shiftText(d) {
-        var day = d.getHours() >= 8 && d.getHours() < 20;
-        var start = new Date(d);
-        if (!day && d.getHours() < 8) start.setDate(d.getDate() - 1);
-        return (day ? 'дневная' : 'ночная') + ' смена ' + pad(start.getDate()) + '.' + pad(start.getMonth() + 1) +
-            (day ? ', 08:00–20:00' : ', 20:00–08:00');
-    }
-
     function initPage(active) {
         var s = session();
         if (!s) { location.replace('login.html'); return null; }
@@ -175,7 +167,6 @@ var Motiv = (function () {
             '<a class="brand" href="index.html"><img src="logo.png" alt=""><span>мотив</span><em>ЦОУ</em></a>' +
             '<nav class="tabs">' + nav + '</nav>' +
             '<div class="topbar-right">' +
-            '<span class="shift" id="shift"></span>' +
             '<span class="who" title="' + esc(s.role_name) + '">' + esc(name) + ' <i class="role role-' + esc(s.role) + '">' +
             esc(s.role_name) + '</i></span>' +
             '<button class="link-btn" id="theme"></button>' +
@@ -203,7 +194,6 @@ var Motiv = (function () {
             var d = new Date();
             document.getElementById('clock').textContent = pad(d.getDate()) + '.' + pad(d.getMonth() + 1) + '.' + d.getFullYear() +
                 ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':' + pad(d.getSeconds());
-            document.getElementById('shift').textContent = shiftText(d);
         };
         tick();
         setInterval(tick, 1000);
@@ -245,6 +235,6 @@ var Motiv = (function () {
         session: session, setSession: setSession, logout: logout, can: can, api: api, esc: esc,
         pad: pad, hms: hms, toSec: toSec, normalizeHms: normalizeHms, fmtDateTime: fmtDateTime,
         parseLocal: parseLocal, toInputValue: toInputValue, isoDate: isoDate, fmtDuration: fmtDuration,
-        toast: toast, initPage: initPage, download: download, shiftText: shiftText, outage: outage,
+        toast: toast, initPage: initPage, download: download, outage: outage,
     };
 })();

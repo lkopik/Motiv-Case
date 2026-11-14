@@ -35,22 +35,22 @@ var AlarmForm = (function () {
         '<div class="form-error" hidden></div>' +
 
         '<fieldset><div class="grid g-6">' +
-          '<label class="f c-2"><span><i class="n">1</i>Номер PW / NTT</span><input name="PW" placeholder="NTT-"></label>' +
+          '<label class="f c-2"><span><i class="n">1</i>Номер PW / NTT</span><input name="PW" maxlength="12" placeholder="NTT-"></label>' +
           '<label class="f"><span><i class="n">2</i>Направление</span><select name="NAPR">' + options(d.napr, true) + '</select></label>' +
           '<label class="f"><span><i class="n">3</i>ТЦ</span><select name="TEHC">' + options(d.tehc, true) + '</select></label>' +
           '<div class="f"><span><i class="n">4</i>Категория</span>' + chips('KATEG', d.kateg) + '</div>' +
           '<div class="f"><span><i class="n">5</i>Тип сети</span>' + chips('NETW_TYPE', d.netw_type) + '</div>' +
 
           '<label class="f c-2"><span><i class="n">6</i>Сетевой элемент, услуга</span>' +
-            '<input name="SERV_ELEM" list="serv-' + uid + '" placeholder="код / адрес БС">' +
+            '<input name="SERV_ELEM" maxlength="50" list="serv-' + uid + '" placeholder="код / адрес БС">' +
             '<small class="hint" data-hint="autofill"></small></label>' +
           '<div class="f c-2"><span><i class="n">7</i>Количество БС</span><div class="bs-count">' +
             '<input name="NUMB_RBS" type="number" min="1" max="10000" placeholder="1">' +
             '<label class="check"><input type="checkbox" name="SECTOR"> С (сектор)</label></div></div>' +
-          '<label class="f c-2"><span><i class="n">8</i>Тип оборудования</span><input name="EQIP_TYPE" list="eqip-' + uid + '"></label>' +
+          '<label class="f c-2"><span><i class="n">8</i>Тип оборудования</span><input name="EQIP_TYPE" maxlength="50" list="eqip-' + uid + '"></label>' +
 
           '<label class="f"><span><i class="n">9</i>Тип аварии</span><select name="ALARM_TYPE">' + options(d.alarm_type, true) + '</select></label>' +
-          '<label class="f c-5"><span><i class="n">10</i>Описание</span><input name="DESCR" list="descr-' + uid + '"></label>' +
+          '<label class="f c-5"><span><i class="n">10</i>Описание</span><input name="DESCR" maxlength="300" list="descr-' + uid + '"></label>' +
         '</div></fieldset>' +
 
         '<fieldset><legend>Время</legend><div class="grid g-6">' +
@@ -68,8 +68,8 @@ var AlarmForm = (function () {
         '</div></fieldset>' +
 
         '<fieldset><legend>Уведомление</legend><div class="grid g-6">' +
-          '<label class="f c-2"><span><i class="n">18</i>Уведомление об аварии (кому)</span><input name="ALARM_WHO" list="who-' + uid + '"></label>' +
-          '<label class="f c-4"><span><i class="n">19</i>Подробное описание</span><textarea name="DESC_NOTICE" rows="2"></textarea></label>' +
+          '<label class="f c-2"><span><i class="n">18</i>Уведомление об аварии (кому)</span><input name="ALARM_WHO" maxlength="300" list="who-' + uid + '"></label>' +
+          '<label class="f c-4"><span><i class="n">19</i>Подробное описание</span><textarea name="DESC_NOTICE" maxlength="400" rows="2"></textarea></label>' +
         '</div></fieldset>' +
 
         '<div class="form-actions">' +

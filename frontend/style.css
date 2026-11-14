@@ -271,7 +271,6 @@ body.app { padding-bottom: 30px; }
 .topbar .brand img { width: 34px; height: 34px; margin-right: 9px; }
 .topbar .brand span { font-size: 23px; font-weight: 700; letter-spacing: -.02em; color: #fff; }
 .topbar .brand em { font-style: normal; font-size: 13px; color: #a3a19a; border-left: 1px solid #4a4a44; margin-left: 12px; padding-left: 12px; }
-.shift { color: #c9c7c0; font-size: 14px; }
 .who { font-size: 14px; }
 .who .role { font-style: normal; }
 
