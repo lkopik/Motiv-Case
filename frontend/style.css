@@ -238,7 +238,7 @@ tfoot td { font-weight: 600; background: var(--surface-2); border-top: 1px solid
 }
 
 @media (max-width: 1350px) {
-    .split { grid-template-columns: minmax(0, 1fr); }
+    .split { grid-template-columns: minmax(0, 1fr) 340px; }
 }
 
 input[type="checkbox"] {
@@ -467,6 +467,8 @@ html.dark .tc-label i { background: #f2f1ec; border-color: #111; }
 .scale b { min-width: 46px; text-align: center; font-size: 13px; color: #c9c7c0; }
 .scale .link-btn { font-weight: 700; padding: 2px 6px; }
 
-html.zoom-big .split, html.zoom-big .map-grid, html.zoom-big .help-grid { grid-template-columns: minmax(0, 1fr); }
+html.zoom-big .map-grid, html.zoom-big .help-grid { grid-template-columns: minmax(0, 1fr); }
 html.zoom-big .help-toc { position: static; }
 html.zoom-big .topbar .brand em, html.zoom-big .who .role, html.zoom-big .statusbar .sb-keys { display: none; }
+
+@media (max-width: 1000px) { .split { grid-template-columns: minmax(0, 1fr); } }
