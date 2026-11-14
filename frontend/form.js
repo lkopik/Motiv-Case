@@ -37,46 +37,46 @@ var AlarmForm = (function () {
         '<div class="form-error" hidden></div>' +
 
         '<fieldset><div class="grid g-6">' +
-          '<label class="f c-2"><span>1. Номер PW / NTT</span><input name="PW" placeholder="NTT-123456 или ссылка — можно пусто"></label>' +
-          '<label class="f"><span>2. Направление</span><select name="NAPR">' + options(d.napr, true) + '</select></label>' +
-          '<label class="f"><span>3. ТЦ</span><select name="TEHC">' + options(d.tehc, true) + '</select></label>' +
-          '<div class="f"><span>4. Категория</span>' + chips('KATEG', d.kateg) + '</div>' +
-          '<div class="f"><span>5. Тип сети</span>' + chips('NETW_TYPE', d.netw_type) + '</div>' +
+          '<label class="f c-2"><span><i class="n">1</i>Номер PW / NTT</span><input name="PW" placeholder="NTT-"></label>' +
+          '<label class="f"><span><i class="n">2</i>Направление</span><select name="NAPR">' + options(d.napr, true) + '</select></label>' +
+          '<label class="f"><span><i class="n">3</i>ТЦ</span><select name="TEHC">' + options(d.tehc, true) + '</select></label>' +
+          '<div class="f"><span><i class="n">4</i>Категория</span>' + chips('KATEG', d.kateg) + '</div>' +
+          '<div class="f"><span><i class="n">5</i>Тип сети</span>' + chips('NETW_TYPE', d.netw_type) + '</div>' +
 
-          '<label class="f c-2"><span>6. Сетевой элемент, услуга <em class="hint" data-hint="autofill"></em></span>' +
-            '<input name="SERV_ELEM" list="serv-' + uid + '" placeholder="Адрес или адреса БС — начните вводить, будут подсказки"></label>' +
-          '<div class="f c-2"><span>7. Количество БС</span><div class="bs-count">' +
+          '<label class="f c-2"><span><i class="n">6</i>Сетевой элемент, услуга <em class="hint" data-hint="autofill"></em></span>' +
+            '<input name="SERV_ELEM" list="serv-' + uid + '" placeholder="код / адрес БС"></label>' +
+          '<div class="f c-2"><span><i class="n">7</i>Количество БС</span><div class="bs-count">' +
             '<input name="NUMB_RBS" type="number" min="1" max="10000" placeholder="1">' +
             '<label class="check"><input type="checkbox" name="SECTOR"> С (сектор)</label></div></div>' +
-          '<label class="f c-2"><span>8. Тип оборудования</span><input name="EQIP_TYPE" list="eqip-' + uid + '"></label>' +
+          '<label class="f c-2"><span><i class="n">8</i>Тип оборудования</span><input name="EQIP_TYPE" list="eqip-' + uid + '"></label>' +
 
-          '<label class="f"><span>9. Тип аварии</span><select name="ALARM_TYPE">' + options(d.alarm_type, true) + '</select></label>' +
-          '<label class="f c-5"><span>10. Описание</span><input name="DESCR" list="descr-' + uid + '" placeholder="Кратко: что случилось"></label>' +
+          '<label class="f"><span><i class="n">9</i>Тип аварии</span><select name="ALARM_TYPE">' + options(d.alarm_type, true) + '</select></label>' +
+          '<label class="f c-5"><span><i class="n">10</i>Описание</span><input name="DESCR" list="descr-' + uid + '"></label>' +
         '</div></fieldset>' +
 
         '<fieldset><legend>Время</legend><div class="grid g-6">' +
-          '<div class="f c-2"><span>11. Начало</span><div class="with-btn">' +
+          '<div class="f c-2"><span><i class="n">11</i>Начало</span><div class="with-btn">' +
             '<input name="BEGIN_TIME" type="datetime-local" required><button type="button" class="btn-mini" data-now="BEGIN_TIME">Сейчас</button></div></div>' +
-          '<div class="f c-2"><span>12. Окончание</span><div class="with-btn">' +
+          '<div class="f c-2"><span><i class="n">12</i>Окончание</span><div class="with-btn">' +
             '<input name="END_TIME" type="datetime-local"><button type="button" class="btn-mini" data-now="END_TIME">Сейчас</button></div>' +
-            '<label class="check nv"><input type="checkbox" name="NV"> НВ — авария продолжается</label></div>' +
-          '<label class="f"><span>13. АКБ</span><input name="AKB" class="hms" placeholder="чч:мм:сс"></label>' +
-          '<label class="f"><span>14. ГУ</span><input name="DGU" class="hms" placeholder="чч:мм:сс"></label>' +
+            '<label class="check nv"><input type="checkbox" name="NV"> НВ (настоящее время)</label></div>' +
+          '<label class="f"><span><i class="n">13</i>АКБ</span><input name="AKB" class="hms" placeholder="чч:мм:сс"></label>' +
+          '<label class="f"><span><i class="n">14</i>ГУ</span><input name="DGU" class="hms" placeholder="чч:мм:сс"></label>' +
 
-          '<label class="f c-2"><span>16. Время перерыва связи (1 БС)</span><input name="PROSTOY" class="hms" placeholder="чч:мм:сс или минуты"></label>' +
-          '<div class="calc c-2"><span>15. Длительность аварии</span><b data-out="LENGHT">—</b><small data-out="LENGHT_NOTE">окончание − начало</small></div>' +
-          '<div class="calc c-2"><span>17. Общее время простоя БС</span><b data-out="COMMON_PROSTOY">—</b><small data-out="COMMON_NOTE">перерыв × количество БС</small></div>' +
+          '<label class="f c-2"><span><i class="n">16</i>Время перерыва связи (1 БС)</span><input name="PROSTOY" class="hms" placeholder="чч:мм:сс"></label>' +
+          '<div class="calc c-2"><span><i class="n">15</i>Длительность аварии</span><b data-out="LENGHT">—</b><small data-out="LENGHT_NOTE">окончание − начало</small></div>' +
+          '<div class="calc c-2"><span><i class="n">17</i>Общее время простоя БС</span><b data-out="COMMON_PROSTOY">—</b><small data-out="COMMON_NOTE">перерыв × количество БС</small></div>' +
         '</div></fieldset>' +
 
         '<fieldset><legend>Уведомление</legend><div class="grid g-6">' +
-          '<label class="f c-2"><span>18. Уведомление об аварии (кому)</span><input name="ALARM_WHO" list="who-' + uid + '"></label>' +
-          '<label class="f c-4"><span>19. Подробное описание</span><textarea name="DESC_NOTICE" rows="2"></textarea></label>' +
+          '<label class="f c-2"><span><i class="n">18</i>Уведомление об аварии (кому)</span><input name="ALARM_WHO" list="who-' + uid + '"></label>' +
+          '<label class="f c-4"><span><i class="n">19</i>Подробное описание</span><textarea name="DESC_NOTICE" rows="2"></textarea></label>' +
         '</div></fieldset>' +
 
         '<div class="form-actions">' +
           '<button type="submit" class="btn btn-primary" data-role="save">Сохранить</button>' +
           '<button type="button" class="btn" data-role="cancel">Отмена</button>' +
-          '<span class="kbd-hint">Ctrl + Enter — сохранить</span>' +
+          '<span class="kbd-hint">Ctrl+Enter</span>' +
           '<span class="audit" data-out="AUDIT"></span>' +
         '</div>' +
         '</form>' +
@@ -168,7 +168,7 @@ var AlarmForm = (function () {
                 out('AUDIT').textContent = current
                     ? 'Внёс: ' + (current.CREATED_BY || '—') + (current.UPDATED_BY ? ', изменил: ' + current.UPDATED_BY + ' ' + M.fmtDateTime(current.UPDATED_AT) : '')
                     : '';
-                form.querySelector('[data-role="save"]').textContent = current ? 'Сохранить изменения' : 'Зарегистрировать аварию';
+                form.querySelector('[data-role="save"]').textContent = current ? 'Сохранить' : 'Записать аварию';
                 form.querySelector('[data-hint="autofill"]').textContent = '';
                 recalc();
             }
@@ -229,7 +229,7 @@ var AlarmForm = (function () {
                     }
                     if (!el('ALARM_WHO').value && a.ALARM_WHO) { el('ALARM_WHO').value = a.ALARM_WHO; filled.push('кому'); }
                     if (filled.length) {
-                        form.querySelector('[data-hint="autofill"]').textContent = '↳ по прошлой аварии: ' + filled.join(', ');
+                        form.querySelector('[data-hint="autofill"]').textContent = 'заполнено по аварии на этом объекте: ' + filled.join(', ');
                         recalc();
                     }
                 });

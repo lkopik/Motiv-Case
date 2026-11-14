@@ -127,31 +127,64 @@ var Motiv = (function () {
         { href: 'dicts.html', title: 'Справочники', admin: true },
     ];
 
-    // Проверяет вход и рисует шапку с меню. Возвращает сессию или null (тогда уже идёт переход на вход).
+    // смена ЦОУ: дневная 08–20, ночная 20–08
+    function shiftText(d) {
+        var day = d.getHours() >= 8 && d.getHours() < 20;
+        var start = new Date(d);
+        if (!day && d.getHours() < 8) start.setDate(d.getDate() - 1);
+        return (day ? 'дневная' : 'ночная') + ' смена ' + pad(start.getDate()) + '.' + pad(start.getMonth() + 1) +
+            (day ? ', 08:00–20:00' : ', 20:00–08:00');
+    }
+
+    // шапка + строка состояния внизу. Без входа — на login
     function initPage(active) {
         var s = session();
         if (!s) { location.replace('login.html'); return null; }
         var nav = PAGES.filter(function (p) { return !p.admin || s.role === 'admin'; }).map(function (p) {
             return '<a href="' + p.href + '"' + (p.href === active ? ' class="active"' : '') + '>' + p.title + '</a>';
         }).join('');
+        var name = s.full_name && s.full_name !== s.role_name ? s.full_name : s.username;
         var header = document.createElement('header');
         header.className = 'topbar';
         header.innerHTML =
-            '<a class="brand" href="index.html"><img class="logo" src="logo.svg" alt="Мотив"></a>' +
+            '<a class="brand" href="index.html"><img src="logo.png" alt=""><span>мотив</span><em>ЦОУ</em></a>' +
             '<nav class="tabs">' + nav + '</nav>' +
             '<div class="topbar-right">' +
-            '<span class="clock" id="clock"></span>' +
-            '<span class="who"><b>' + esc(s.full_name && s.full_name !== s.role_name ? s.full_name : s.username) + '</b><span class="role role-' + esc(s.role) + '">' +
-            esc(s.role_name) + '</span></span>' +
-            '<button class="link-btn" id="logout">Выйти</button></div>';
+            '<span class="shift" id="shift"></span>' +
+            '<span class="who" title="' + esc(s.role_name) + '">' + esc(name) + ' <i class="role role-' + esc(s.role) + '">' +
+            esc(s.role_name) + '</i></span>' +
+            '<button class="link-btn" id="logout" title="Выйти">Выход</button></div>';
         document.body.insertBefore(header, document.body.firstChild);
         document.getElementById('logout').onclick = logout;
+
+        var bar = document.createElement('footer');
+        bar.className = 'statusbar';
+        bar.innerHTML = '<span id="sb-db">БД: …</span><span id="sb-count"></span>' +
+            '<span class="sb-keys">Ctrl+Enter — сохранить · Esc — закрыть окно</span><span id="clock"></span>';
+        document.body.appendChild(bar);
+
         var tick = function () {
             var d = new Date();
-            document.getElementById('clock').textContent = pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':' + pad(d.getSeconds());
+            document.getElementById('clock').textContent = pad(d.getDate()) + '.' + pad(d.getMonth() + 1) + '.' + d.getFullYear() +
+                ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':' + pad(d.getSeconds());
+            document.getElementById('shift').textContent = shiftText(d);
         };
         tick();
         setInterval(tick, 1000);
+        var ping = function () {
+            fetch('/api/health', { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (h) {
+                var ok = h.database === 'ok';
+                var el = document.getElementById('sb-db');
+                el.textContent = ok ? 'БД: подключена' : 'БД: нет связи';
+                el.className = ok ? 'ok' : 'bad';
+                document.getElementById('sb-count').textContent = ok ? 'записей в журнале: ' + h.alarms : '';
+            }).catch(function () {
+                document.getElementById('sb-db').textContent = 'сервер недоступен';
+                document.getElementById('sb-db').className = 'bad';
+            });
+        };
+        ping();
+        setInterval(ping, 30000);
         document.body.className += ' role-' + s.role;
         document.body.style.visibility = 'visible';
         return s;
@@ -175,6 +208,6 @@ var Motiv = (function () {
         session: session, setSession: setSession, logout: logout, can: can, api: api, esc: esc,
         pad: pad, hms: hms, toSec: toSec, normalizeHms: normalizeHms, fmtDateTime: fmtDateTime,
         parseLocal: parseLocal, toInputValue: toInputValue, isoDate: isoDate, fmtDuration: fmtDuration,
-        toast: toast, initPage: initPage, download: download,
+        toast: toast, initPage: initPage, download: download, shiftText: shiftText,
     };
 })();

@@ -4,17 +4,17 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Отчётность — Мотив</title>
-    <link rel="icon" href="favicon.svg" type="image/svg+xml">
-    <link rel="stylesheet" href="style.css?v=8">
-    <script src="app.js?v=8"></script>
-    <script src="form.js?v=8"></script>
+    <link rel="icon" href="logo.png" type="image/png">
+    <link rel="stylesheet" href="style.css?v=9">
+    <script src="app.js?v=9"></script>
+    <script src="form.js?v=9"></script>
 </head>
 <body class="app">
     <main class="page">
         <div class="page-head">
             <div>
                 <h1>Отчётность</h1>
-                <div class="page-sub" id="sub">События за выбранный период. Нажмите на строку, чтобы открыть аварию.</div>
+                <div class="page-sub" id="sub">Журнал аварий за период</div>
             </div>
             <div class="actions">
                 <button class="btn btn-primary" id="csv">Выгрузить CSV</button>
@@ -68,6 +68,22 @@
     <script>
         var M = Motiv, session = M.initPage('reports.html');
         var rows = [], form, openedId = null;
+        // сортировка по клику на заголовок: ключи в порядке столбцов таблицы
+        var KEYS = ['ID', 'PW', 'NAPR', 'TEHC', 'KATEG', 'NETW_TYPE', 'SERV_ELEM', 'NUMB_RBS', 'EQIP_TYPE', 'ALARM_TYPE', 'DESCR',
+                    'BEGIN_TIME', 'END_TIME', 'AKB', 'DGU', 'LENGHT', 'PROSTOY', 'COMMON_PROSTOY', 'ALARM_WHO', 'DESC_NOTICE', 'CREATED_BY'];
+        var TIMES = ['AKB', 'DGU', 'LENGHT', 'PROSTOY', 'COMMON_PROSTOY'];
+        var sortKey = null, sortDir = 1;
+
+        function sortRows() {
+            if (!sortKey) return;
+            rows.sort(function (a, b) {
+                var x = a[sortKey], y = b[sortKey];
+                if (TIMES.indexOf(sortKey) >= 0) { x = M.toSec(x); y = M.toSec(y); }   // 123:00:00 > 09:00:00
+                if (x === null || x === undefined || x === '') return 1;
+                if (y === null || y === undefined || y === '') return -1;
+                return (x > y ? 1 : x < y ? -1 : 0) * sortDir;
+            });
+        }
 
         function setPeriod(p) {
             var now = new Date(), from = new Date(now), to = new Date(now);
@@ -98,6 +114,7 @@
         function cell(v, cls) { return '<td' + (cls ? ' class="' + cls + '"' : '') + ' title="' + M.esc(v) + '">' + M.esc(v) + '</td>'; }
 
         function render() {
+            sortRows();
             var tbody = document.getElementById('rows');
             if (!rows.length) {
                 tbody.innerHTML = '<tr><td colspan="21" class="empty">За этот период аварий нет</td></tr>';
@@ -189,6 +206,16 @@
                     .catch(function (e) { M.toast(e.message, 'error'); });
             };
 
+            Array.prototype.forEach.call(document.querySelectorAll('.report-table thead th'), function (th, i) {
+                th.className += ' sortable';
+                th.onclick = function () {
+                    sortDir = sortKey === KEYS[i] ? -sortDir : 1;
+                    sortKey = KEYS[i];
+                    Array.prototype.forEach.call(th.parentNode.children, function (x) { x.classList.remove('sort-asc', 'sort-desc'); });
+                    th.classList.add(sortDir > 0 ? 'sort-asc' : 'sort-desc');
+                    render();
+                };
+            });
             setPeriod('week');
         }
     </script>

@@ -280,3 +280,59 @@ input::-webkit-calendar-picker-indicator:hover { opacity: 1; }
 .logo { display: block; height: 34px; width: auto; }
 .brand { margin-right: 32px; }
 .login-aside .logo { height: 44px; }
+
+/* ===== рабочий вид: плотнее, без «лендинговых» акцентов ===== */
+body.app { padding-bottom: 30px; }
+.page { padding: 18px 20px 40px; }
+.page-head { margin-bottom: 12px; }
+.page-head h1 { font-size: 22px; }
+.page-sub { font-size: 14px; }
+
+.topbar .brand { display: flex; align-items: center; text-decoration: none; letter-spacing: 0; }
+.topbar .brand img { width: 34px; height: 34px; margin-right: 9px; }
+.topbar .brand span { font-size: 23px; font-weight: 700; letter-spacing: -.02em; color: #fff; }
+.topbar .brand em { font-style: normal; font-size: 13px; color: #a3a19a; border-left: 1px solid #4a4a44; margin-left: 12px; padding-left: 12px; }
+.shift { color: #c9c7c0; font-size: 14px; }
+.who { font-size: 14px; }
+.who .role { font-style: normal; }
+
+.statusbar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 60; display: flex; height: 26px; background: #2a2a27; color: #b9b7b0; font-size: 13px; }
+.statusbar span { display: flex; align-items: center; padding: 0 12px; border-right: 1px solid #3c3c37; }
+.statusbar .sb-keys { margin-left: auto; border-left: 1px solid #3c3c37; }
+.statusbar #clock { font-family: var(--mono); border-right: none; }
+.statusbar .ok::before, .statusbar .bad::before { content: ""; width: 7px; height: 7px; border-radius: 50%; margin-right: 6px; background: #5cc06b; }
+.statusbar .bad { color: #ff9a8f; }
+.statusbar .bad::before { background: #ff5a4a; }
+
+.panel { border-color: #d6d2c8; }
+.panel-head { min-height: 42px; padding: 8px 14px; background: linear-gradient(#faf9f6, #f0eee9); border-bottom-color: #d6d2c8; }
+.alarm-form fieldset { padding: 10px 14px 14px; }
+.alarm-form legend { text-transform: none; letter-spacing: 0; font-size: 14px; font-weight: 600; color: var(--ink-2);
+    background: #f1efea; border-left: 3px solid #b9b4a8; padding: 3px 8px; margin-bottom: 10px; }
+.f > span .n, .calc > span .n { display: inline-block; min-width: 20px; padding: 0 3px; margin-right: 6px; text-align: center;
+    font-style: normal; font-size: 12px; font-weight: 600; color: #8a877f; background: #efede8; border: 1px solid #dedad1; }
+
+tbody tr:nth-child(even) td { background: #faf9f6; }
+tbody tr:hover td { background: #fff4ec; }
+td + td { border-left: 1px solid #f1efea; }
+th { background: linear-gradient(#faf9f6, #efede8); }
+th.sortable { cursor: pointer; user-select: none; }
+th.sortable:hover { color: var(--ink); }
+th.sort-asc::after { content: " ▲"; font-size: 10px; }
+th.sort-desc::after { content: " ▼"; font-size: 10px; }
+
+/* вход */
+.login-page { background: #e9e7e1; display: flex; align-items: center; justify-content: center; min-height: 100vh; }
+.login2 { width: 100%; max-width: 440px; background: var(--surface); border: 1px solid #cfcac0; box-shadow: 0 6px 24px rgba(0, 0, 0, .12); }
+.login2-head { display: flex; align-items: center; padding: 16px 20px; background: var(--graphite); color: #fff; border-bottom: 3px solid var(--orange); }
+.login2-head img { width: 44px; height: 44px; margin-right: 12px; }
+.login2-head b { display: block; font-size: 26px; line-height: 1; letter-spacing: -.02em; }
+.login2-head span { display: block; font-size: 13px; color: #a3a19a; margin-top: 4px; }
+.login-page .login-main { padding: 20px 24px 24px; display: block; }
+.login-page .login-form { max-width: none; }
+.login2-title { font-size: 17px; font-weight: 600; }
+.demo-tbl { margin-top: 20px; font-size: 14px; }
+.demo-tbl th { text-align: left; font-weight: 600; color: var(--muted); background: none; position: static; }
+.demo-tbl td { font-family: var(--mono); cursor: pointer; border-left: none; }
+.demo-tbl td:last-child { font-family: var(--font); color: var(--muted); }
+.demo-tbl tr[data-u]:hover td { background: var(--orange-tint); }
