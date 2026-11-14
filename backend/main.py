@@ -9,7 +9,9 @@ import re
 import time
 from datetime import date, datetime
 
-from fastapi import FastAPI, HTTPException, Depends, Header
+import pymysql
+from fastapi import FastAPI, HTTPException, Depends, Header, Request
+from fastapi.responses import JSONResponse
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, field_validator, Field
 
@@ -73,13 +75,32 @@ def data_tranfer():
 
 # ---------------- API для сайта (nginx пускает только /api) ----------------
 
+DB_DOWN = ("Нет связи с базой данных. Запись не сохранена — повторите через минуту. "
+           "Если ошибка не проходит, сообщите администратору (контейнер db).")
+
+
 @app.on_event("startup")
 async def startup():
-    await db.init_pool()
+    try:
+        await db.init_pool()
+    except Exception:
+        pass  # база может подняться позже, пул создастся при первом запросе
+
+
+# база недоступна -> понятный ответ 503 вместо «Internal Server Error»
+@app.exception_handler(pymysql.err.OperationalError)
+@app.exception_handler(pymysql.err.InterfaceError)
+@app.exception_handler(ConnectionError)
+async def db_down(request: Request, exc: Exception):
+    return JSONResponse(status_code=503, content={"detail": DB_DOWN, "code": "db_unavailable"})
 
 
 @app.get("/api/health")
 async def api_health():
+    try:
+        await db.init_pool()
+    except Exception:
+        return {"api": "ok", "database": "error: нет подключения"}
     return {"api": "ok", **(await db.health())}
 
 

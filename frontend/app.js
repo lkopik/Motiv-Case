@@ -28,12 +28,19 @@ var Motiv = (function () {
             opts.headers['Content-Type'] = 'application/json';
             opts.body = JSON.stringify(body);
         }
-        return fetch('/api' + path, opts).then(function (r) {
+        return fetch('/api' + path, opts).catch(function () {
+            // сеть или сервер совсем не отвечают
+            outage('server');
+            throw new Error(OUTAGE.server.text);
+        }).then(function (r) {
             if (r.status === 401 && path !== '/login') { logout(); throw new Error('Сессия истекла'); }
+            if (r.status === 502 || r.status === 504) { outage('server'); throw new Error(OUTAGE.server.text); }
             var isJson = (r.headers.get('Content-Type') || '').indexOf('json') >= 0;
             var data = isJson ? r.json() : r.blob();
             return data.then(function (d) {
+                if (r.status === 503) { outage('db'); throw new Error(OUTAGE.db.text); }
                 if (!r.ok) throw new Error(errorText(d, r.status));
+                outage(null);
                 return d;
             });
         });
@@ -44,8 +51,32 @@ var Motiv = (function () {
         if (d && d.detail && d.detail.length) {
             return d.detail.map(function (e) { return (e.loc ? e.loc[e.loc.length - 1] + ': ' : '') + e.msg; }).join('; ');
         }
-        if (status === 403) return 'Недостаточно прав';
-        return 'Ошибка сервера (' + status + ')';
+        if (status === 403) return 'Недостаточно прав для этого действия';
+        return 'Ошибка на сервере (код ' + status + '). Повторите действие; если не помогло — сообщите администратору.';
+    }
+
+    // большая плашка сверху, пока нет связи
+    var OUTAGE = {
+        db: { title: 'Нет связи с базой данных',
+              text: 'Данные сейчас не сохраняются и не загружаются. Ничего не потеряно — повторите действие через минуту. ' +
+                    'Если плашка не исчезает больше 5 минут, сообщите администратору.' },
+        server: { title: 'Сервер не отвечает',
+                  text: 'Нет связи с сервером. Проверьте сеть; если с сетью всё в порядке — сообщите администратору.' }
+    };
+
+    function outage(kind) {
+        var el = document.getElementById('outage');
+        if (!kind) { if (el) el.hidden = true; return; }
+        if (!el) {
+            el = document.createElement('div');
+            el.id = 'outage';
+            el.className = 'outage';
+            var top = document.querySelector('.topbar');
+            document.body.insertBefore(el, top ? top.nextSibling : document.body.firstChild);
+        }
+        el.innerHTML = '<b>' + OUTAGE[kind].title + '</b><span>' + OUTAGE[kind].text + '</span>' +
+            '<button type="button" class="btn btn-sm" onclick="location.reload()">Проверить снова</button>';
+        el.hidden = false;
     }
 
     function esc(v) {
@@ -125,6 +156,7 @@ var Motiv = (function () {
         { href: 'reports.html', title: 'Отчётность' },
         { href: 'stats.html', title: 'Статистика' },
         { href: 'dicts.html', title: 'Справочники', admin: true },
+        { href: 'help.html', title: 'Справка' },
     ];
 
     // смена ЦОУ: дневная 08–20, ночная 20–08
@@ -178,9 +210,11 @@ var Motiv = (function () {
                 el.textContent = ok ? 'БД: подключена' : 'БД: нет связи';
                 el.className = ok ? 'ok' : 'bad';
                 document.getElementById('sb-count').textContent = ok ? 'записей в журнале: ' + h.alarms : '';
+                outage(ok ? null : 'db');
             }).catch(function () {
                 document.getElementById('sb-db').textContent = 'сервер недоступен';
                 document.getElementById('sb-db').className = 'bad';
+                outage('server');
             });
         };
         ping();
@@ -208,6 +242,6 @@ var Motiv = (function () {
         session: session, setSession: setSession, logout: logout, can: can, api: api, esc: esc,
         pad: pad, hms: hms, toSec: toSec, normalizeHms: normalizeHms, fmtDateTime: fmtDateTime,
         parseLocal: parseLocal, toInputValue: toInputValue, isoDate: isoDate, fmtDuration: fmtDuration,
-        toast: toast, initPage: initPage, download: download, shiftText: shiftText,
+        toast: toast, initPage: initPage, download: download, shiftText: shiftText, outage: outage,
     };
 })();

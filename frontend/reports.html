@@ -5,9 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Отчётность — Мотив</title>
     <link rel="icon" href="logo.png" type="image/png">
-    <link rel="stylesheet" href="style.css?v=9">
-    <script src="app.js?v=9"></script>
-    <script src="form.js?v=9"></script>
+    <link rel="stylesheet" href="style.css?v=10">
+    <script src="app.js?v=10"></script>
+    <script src="form.js?v=10"></script>
 </head>
 <body class="app">
     <main class="page">
@@ -40,12 +40,12 @@
             <div class="table-wrap">
                 <table class="report-table">
                     <thead><tr>
-                        <th class="num">№</th><th>PW/NTT</th><th>Напр.</th><th>ТЦ</th><th>Кат.</th><th>Сеть</th>
+                        <th></th><th class="num">№</th><th>PW/NTT</th><th>Напр.</th><th>ТЦ</th><th>Кат.</th><th>Сеть</th>
                         <th>Сетевой элемент</th><th class="num">БС</th><th>Оборудование</th><th>Тип</th><th>Описание</th>
                         <th>Начало</th><th>Окончание</th><th>АКБ</th><th>ГУ</th><th>Длительность</th>
                         <th>Перерыв</th><th>Общий простой</th><th>Кому</th><th>Подробно</th><th>Внёс</th>
                     </tr></thead>
-                    <tbody id="rows"><tr><td colspan="21" class="empty">Загрузка…</td></tr></tbody>
+                    <tbody id="rows"><tr><td colspan="22" class="empty">Загрузка…</td></tr></tbody>
                     <tfoot id="foot"></tfoot>
                 </table>
             </div>
@@ -57,8 +57,9 @@
             <div class="modal-head">
                 <h2 id="modal-title">Авария</h2>
                 <div>
+                    <button class="btn btn-sm" id="full">На весь экран</button>
                     <button class="btn btn-sm btn-danger can-admin" id="delete">Удалить</button>
-                    <button class="modal-x" id="modal-x" title="Закрыть">×</button>
+                    <button class="modal-x" id="modal-x" title="Закрыть (Esc)">×</button>
                 </div>
             </div>
             <div id="modal-form"></div>
@@ -69,7 +70,7 @@
         var M = Motiv, session = M.initPage('reports.html');
         var rows = [], form, openedId = null;
         // сортировка по клику на заголовок: ключи в порядке столбцов таблицы
-        var KEYS = ['ID', 'PW', 'NAPR', 'TEHC', 'KATEG', 'NETW_TYPE', 'SERV_ELEM', 'NUMB_RBS', 'EQIP_TYPE', 'ALARM_TYPE', 'DESCR',
+        var KEYS = [null, 'ID', 'PW', 'NAPR', 'TEHC', 'KATEG', 'NETW_TYPE', 'SERV_ELEM', 'NUMB_RBS', 'EQIP_TYPE', 'ALARM_TYPE', 'DESCR',
                     'BEGIN_TIME', 'END_TIME', 'AKB', 'DGU', 'LENGHT', 'PROSTOY', 'COMMON_PROSTOY', 'ALARM_WHO', 'DESC_NOTICE', 'CREATED_BY'];
         var TIMES = ['AKB', 'DGU', 'LENGHT', 'PROSTOY', 'COMMON_PROSTOY'];
         var sortKey = null, sortDir = 1;
@@ -117,7 +118,7 @@
             sortRows();
             var tbody = document.getElementById('rows');
             if (!rows.length) {
-                tbody.innerHTML = '<tr><td colspan="21" class="empty">За этот период аварий нет</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="22" class="empty">За этот период аварий нет</td></tr>';
                 document.getElementById('foot').innerHTML = '';
                 return;
             }
@@ -126,6 +127,7 @@
                 totalSec += M.toSec(a.COMMON_PROSTOY);
                 if (a.IS_OPEN) open++;
                 return '<tr class="clickable" data-id="' + a.ID + '">' +
+                    '<td><button class="btn btn-sm btn-view" data-view="' + a.ID + '">Просмотр</button></td>' +
                     '<td class="num muted">' + a.ID + '</td>' + cell(a.PW, 'nowrap') + cell(a.NAPR, 'nowrap') + cell(a.TEHC) +
                     '<td>' + (a.KATEG ? '<span class="kat kat-' + a.KATEG + '">' + a.KATEG + '</span>' : '') + '</td>' +
                     cell(a.NETW_TYPE, 'nowrap') + cell(a.SERV_ELEM, 'cut') +
@@ -139,7 +141,7 @@
                     cell(a.ALARM_WHO, 'cut') + cell(a.DESC_NOTICE, 'cut') + cell(a.UPDATED_BY || a.CREATED_BY, 'muted') +
                     '</tr>';
             }).join('');
-            document.getElementById('foot').innerHTML = '<tr><td colspan="17">Итого: ' + rows.length + ' ' +
+            document.getElementById('foot').innerHTML = '<tr><td colspan="18">Итого: ' + rows.length + ' ' +
                 (rows.length % 10 === 1 && rows.length % 100 !== 11 ? 'авария' : 'аварий') +
                 (open ? ', не закрыто: ' + open : '') + '</td><td class="mono">' + M.hms(totalSec) + '</td><td colspan="3"></td></tr>';
         }
@@ -149,9 +151,15 @@
                 .catch(function (e) { M.toast(e.message, 'error'); });
         }
 
-        function openModal(id) {
+        // full = открыть на весь экран (кнопка «Просмотр»)
+        function setFull(on) {
+            document.getElementById('modal').classList.toggle('full', on);
+            document.getElementById('full').textContent = on ? 'Обычный размер' : 'На весь экран';
+        }
+        function openModal(id, full) {
             M.api('GET', '/alarms/' + id).then(function (a) {
                 openedId = id;
+                setFull(!!full);
                 document.getElementById('modal-title').textContent = 'Авария № ' + a.ID + (a.IS_OPEN ? ' · НВ' : '');
                 document.getElementById('modal').hidden = false;
                 form.ready.then(function () { form.fill(a); });
@@ -176,10 +184,15 @@
             });
 
             document.getElementById('rows').onclick = function (e) {
+                var view = e.target.getAttribute('data-view');
+                if (view) { openModal(view, true); return; }
                 var tr = e.target.closest('tr[data-id]');
                 if (tr) openModal(tr.getAttribute('data-id'));
             };
             document.getElementById('modal-x').onclick = closeModal;
+            document.getElementById('full').onclick = function () {
+                setFull(!document.getElementById('modal').classList.contains('full'));
+            };
             document.getElementById('modal').onclick = function (e) { if (e.target.id === 'modal') closeModal(); };
             document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeModal(); });
             document.getElementById('delete').onclick = function () {
@@ -207,6 +220,7 @@
             };
 
             Array.prototype.forEach.call(document.querySelectorAll('.report-table thead th'), function (th, i) {
+                if (!KEYS[i]) return;
                 th.className += ' sortable';
                 th.onclick = function () {
                     sortDir = sortKey === KEYS[i] ? -sortDir : 1;
@@ -217,6 +231,8 @@
                 };
             });
             setPeriod('week');
+            var m = /[?&]view=(\d+)/.exec(location.search);
+            if (m) openModal(m[1], true);
         }
     </script>
 </body>

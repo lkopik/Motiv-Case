@@ -84,6 +84,27 @@ var AlarmForm = (function () {
         datalist('descr-' + uid, s.DESCR) + datalist('who-' + uid, s.ALARM_WHO);
     }
 
+    // пояснения к полям (по ТЗ) — всплывают при наведении на «?»
+    var HELP = {
+        PW: 'Номер заявки NTT/PW в CRM. Можно оставить пустым, если заявки нет.',
+        NAPR: 'Территориальное направление: ХМЯН, СВН, ЮЗН или «Вся сеть».',
+        TEHC: 'Технический центр, в зоне которого авария.',
+        KATEG: 'Категория аварии: 1 — самая серьёзная, 3 — наименее.',
+        NETW_TYPE: 'Какая сеть пострадала: GSM, LTE или обе.',
+        SERV_ELEM: 'Адрес или код БС (можно несколько). Начните вводить — появятся подсказки из прошлых аварий.',
+        NUMB_RBS: 'Сколько БС без связи (до 10000). Если пострадал только сектор — отметьте «С».',
+        EQIP_TYPE: 'Модель или описание оборудования.',
+        ALARM_TYPE: 'Тип аварии: ЭЛ — электропитание, РРС — радиорелейная связь, RBS — оборудование БС и т. д.',
+        DESCR: 'Коротко: что случилось.',
+        BEGIN_TIME: 'Когда началась авария. Кнопка «Сейчас» ставит текущее время.',
+        END_TIME: 'Когда закончилась. Если авария продолжается — отметьте «НВ».',
+        AKB: 'Сколько БС работала от аккумуляторов, чч:мм:сс. Можно ввести минуты: 90 = 01:30:00.',
+        DGU: 'Сколько БС работала от генератора, чч:мм:сс.',
+        PROSTOY: 'Среднее время без связи для одной БС, чч:мм:сс. Можно ввести минуты.',
+        ALARM_WHO: 'Кому и когда сообщили об аварии.',
+        DESC_NOTICE: 'Подробности: причина, что сделано, кто выехал.'
+    };
+
     var counter = 0;
 
     function create(container, opts) {
@@ -93,6 +114,12 @@ var AlarmForm = (function () {
 
         api.ready = loadRefs().then(function (refs) {
             container.innerHTML = template(uid, refs);
+            Object.keys(HELP).forEach(function (name) {
+                var input = container.querySelector('[name="' + name + '"]');
+                var label = input && input.closest('.f');
+                var cap = label && label.querySelector('span');
+                if (cap) cap.insertAdjacentHTML('beforeend', ' <b class="q" title="' + M.esc(HELP[name]) + '">?</b>');
+            });
             var form = container.querySelector('form');
             var el = function (name) { return form.elements[name]; };
             var out = function (name) { return form.querySelector('[data-out="' + name + '"]'); };
