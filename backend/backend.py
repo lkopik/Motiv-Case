@@ -80,6 +80,11 @@ async def query_one(sql, params=()):
     return rows[0] if rows else None
 
 
+async def is_future(value):
+    row = await query_one("SELECT %s > NOW() + INTERVAL 10 MINUTE AS f", (value,))
+    return bool(row and row["f"])
+
+
 async def run(sql, params=()):
     await init_pool()
     async with pool.acquire() as conn:

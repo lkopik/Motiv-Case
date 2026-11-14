@@ -210,7 +210,21 @@ var AlarmForm = (function () {
                 recalc();
             }
 
+            function fail(name, text) {
+                var field = el(name);
+                if (field) {
+                    field.classList.add('invalid');
+                    field.focus();
+                }
+                return text;
+            }
+
+            function inFuture(value) {
+                return value && new Date(value).getTime() > Date.now() + 10 * 60 * 1000;
+            }
+
             function collect() {
+                Array.prototype.forEach.call(form.querySelectorAll('.invalid'), function (f) { f.classList.remove('invalid'); });
                 var data = {};
                 ['PW', 'NAPR', 'TEHC', 'SERV_ELEM', 'EQIP_TYPE', 'ALARM_TYPE', 'DESCR', 'ALARM_WHO', 'DESC_NOTICE']
                     .forEach(function (f) { data[f] = el(f).value.trim() || null; });
@@ -226,10 +240,19 @@ var AlarmForm = (function () {
                     if (v === null) bad.push(f);
                     data[f] = v || null;
                 });
-                if (!data.BEGIN_TIME) return 'Укажите начало аварии';
-                if (bad.length) return 'Время работы и перерыва — в формате чч:мм:сс (или числом минут)';
-                if (!el('NV').checked && !data.END_TIME) return 'Укажите окончание или отметьте «НВ»';
-                if (data.END_TIME && data.END_TIME < data.BEGIN_TIME) return 'Окончание раньше начала';
+                if (!data.TEHC) return fail('TEHC', 'Выберите ТЦ');
+                if (!data.SERV_ELEM) return fail('SERV_ELEM', 'Укажите сетевой элемент — код или адрес БС');
+                var count = el('NUMB_RBS').value;
+                if (!el('SECTOR').checked && count && !/^\d+$/.test(count)) return fail('NUMB_RBS', 'Количество БС — целое число');
+                if (data.NUMB_RBS !== null && data.NUMB_RBS !== 0 && (data.NUMB_RBS < 1 || data.NUMB_RBS > 10000)) {
+                    return fail('NUMB_RBS', 'Количество БС — от 1 до 10000 (или отметьте «С»)');
+                }
+                if (!data.BEGIN_TIME) return fail('BEGIN_TIME', 'Укажите начало аварии');
+                if (inFuture(data.BEGIN_TIME)) return fail('BEGIN_TIME', 'Начало аварии не может быть в будущем');
+                if (bad.length) return fail(bad[0], 'Время работы и перерыва — в формате чч:мм:сс (или числом минут)');
+                if (!el('NV').checked && !data.END_TIME) return fail('END_TIME', 'Укажите окончание или отметьте «НВ»');
+                if (data.END_TIME && data.END_TIME < data.BEGIN_TIME) return fail('END_TIME', 'Окончание раньше начала');
+                if (inFuture(data.END_TIME)) return fail('END_TIME', 'Окончание не может быть в будущем');
                 return data;
             }
 
@@ -273,6 +296,8 @@ var AlarmForm = (function () {
 
             form.addEventListener('submit', save);
             form.addEventListener('input', recalc);
+            form.addEventListener('input', function (e) { e.target.classList.remove('invalid'); });
+            form.addEventListener('change', function (e) { e.target.classList.remove('invalid'); });
             form.addEventListener('keydown', function (e) {
                 if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) save(e);
             });
