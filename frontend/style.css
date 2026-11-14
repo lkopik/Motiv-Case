@@ -479,3 +479,16 @@ html.zoom-big .topbar .brand em, html.zoom-big .who .role, html.zoom-big .status
 select.invalid, textarea.invalid { border-color: var(--red); background: var(--red-tint); }
 html.dark .help code, html.dark kbd { background: #2c2f35; border-color: #4a4e56; color: #f1efe9; }
 html.dark select.invalid, html.dark input.invalid, html.dark textarea.invalid { background: #3a2222; }
+html.zoom-big .split { grid-template-columns: minmax(0, 1fr); }
+.kpi b { white-space: nowrap; }
+html.zoom-big .kpis { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+html.zoom-big .kpi b { font-size: 26px; }
+.topbar .link-btn { white-space: nowrap; }
+html.zoom-big .topbar { padding: 0 12px; }
+html.zoom-big .tabs a { padding: 0 10px 3px; }
+html.zoom-big .topbar .brand { margin-right: 14px; }
+html.zoom-big .topbar-right > * { margin-left: 12px; }
+@media (max-width: 1400px) { html.zoom-big .topbar .brand span { display: none; } }
+html.zoom-big .f > span { font-size: 13px; }
+html.zoom-big .grid { grid-column-gap: 10px; }
+html.zoom-big .g-6 { grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr) repeat(4, minmax(0, 1fr)); }

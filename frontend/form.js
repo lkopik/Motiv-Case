@@ -35,7 +35,7 @@ var AlarmForm = (function () {
         '<div class="form-error" hidden></div>' +
 
         '<fieldset><div class="grid g-6">' +
-          '<label class="f"><span><i class="n">1</i>Номер PW / NTT</span><input name="PW" maxlength="12" placeholder="NTT-"></label>' +
+          '<label class="f"><span><i class="n">1</i>PW / NTT</span><input name="PW" maxlength="12" placeholder="NTT-"></label>' +
           '<label class="f"><span><i class="n">2</i>Направление</span><select name="NAPR">' + options(d.napr, true) + '</select></label>' +
           '<label class="f"><span><i class="n">3</i>ТЦ</span><select name="TEHC">' + options(d.tehc, true) + '</select></label>' +
           '<div class="f"><span><i class="n">4</i>Категория</span>' + chips('KATEG', d.kateg) + '</div>' +

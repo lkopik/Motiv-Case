@@ -198,7 +198,8 @@ var Motiv = (function () {
         };
         var themeBtn = document.getElementById('theme');
         var setThemeText = function () {
-            themeBtn.textContent = document.documentElement.classList.contains('dark') ? 'Светлая тема' : 'Тёмная тема';
+            themeBtn.textContent = document.documentElement.classList.contains('dark') ? 'Светлая' : 'Тёмная';
+            themeBtn.title = 'Переключить тему';
         };
         setThemeText();
         themeBtn.onclick = function () {
