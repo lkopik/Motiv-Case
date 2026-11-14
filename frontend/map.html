@@ -5,15 +5,17 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Карта — Мотив</title>
     <link rel="icon" href="logo.png" type="image/png">
-    <link rel="stylesheet" href="style.css?v=11">
-    <script src="app.js?v=11"></script>
+    <link rel="stylesheet" href="vendor/leaflet/leaflet.css">
+    <link rel="stylesheet" href="style.css?v=13">
+    <script src="vendor/leaflet/leaflet.js"></script>
+    <script src="app.js?v=13"></script>
 </head>
 <body class="app">
     <main class="page">
         <div class="page-head">
             <div>
                 <h1>Карта аварий</h1>
-                <div class="page-sub" id="sub">Работает без интернета</div>
+                <div class="page-sub" id="sub"></div>
             </div>
             <div class="actions">
                 <div class="quick" id="period" style="display:inline-flex">
@@ -24,11 +26,12 @@
         </div>
 
         <div class="map-grid">
-            <section class="panel map-panel">
+            <section class="panel">
                 <div class="panel-head">
-                    <div class="filters" style="padding:0;border:none">
-                        <input id="find" class="find" placeholder="Город, ТЦ или код БС" list="places">
+                    <div class="map-search">
+                        <input id="find" placeholder="Город, ТЦ или код БС" list="places">
                         <datalist id="places"></datalist>
+                        <button class="btn btn-sm" id="find-btn">Найти</button>
                         <button class="btn btn-sm" id="reset">Вся сеть</button>
                     </div>
                     <div class="map-legend">
@@ -37,16 +40,18 @@
                         <span><i class="dot d-closed"></i>закрыта</span>
                     </div>
                 </div>
-                <div class="map-box">
-                    <svg id="map" viewBox="0 0 1000 720"></svg>
-                    <div class="map-tip" id="tip" hidden></div>
+                <div class="map-offline" id="offline" hidden>
+                    Нет связи с сервером карт — подложка не загружается. Аварии, города и техцентры показаны поверх схемы.
                 </div>
+                <div id="map"></div>
             </section>
 
             <aside class="panel">
                 <div class="panel-head"><div class="panel-title">Техцентры</div></div>
-                <table class="tc-table"><thead><tr><th>ТЦ</th><th>Город</th><th class="num">Открыто</th><th class="num">Всего</th></tr></thead>
-                    <tbody id="tc-list"></tbody></table>
+                <table class="tc-table">
+                    <thead><tr><th>ТЦ</th><th>Город</th><th class="num">Открыто</th><th class="num">Всего</th></tr></thead>
+                    <tbody id="tc-list"></tbody>
+                </table>
             </aside>
         </div>
     </main>
@@ -63,14 +68,10 @@
             'НВРТ': ['Нижневартовск', 60.94, 76.57], 'НБР': ['Ноябрьск', 63.20, 75.45], 'НУРГ': ['Новый Уренгой', 66.08, 76.68],
             'СЛХ': ['Салехард', 66.53, 66.60]
         };
-        var REGIONS = [['ЯНАО', 65.6, 72.5], ['ХМАО — Югра', 62.6, 71.0], ['Свердловская обл.', 58.6, 61.6], ['Курганская обл.', 55.6, 63.0]];
         var OB = [[60.9, 76.6], [61.2, 73.4], [61.1, 70.0], [61.0, 69.0], [62.2, 65.6], [64.0, 65.3], [65.8, 65.7], [66.6, 66.6], [67.4, 70.5], [68.2, 73.0]];
+        var NETWORK = [[55.0, 58.5], [67.2, 78.0]];
 
-        var LAT0 = 54.5, LAT1 = 69.0, LON0 = 57.5, LON1 = 79.5;
-        var full = '0 0 1000 720', alarms = [], points = [];
-
-        function x(lon) { return 40 + (lon - LON0) / (LON1 - LON0) * 920; }
-        function y(lat) { return 690 - (lat - LAT0) / (LAT1 - LAT0) * 660; }
+        var map, dotsLayer, alarms = [], tileErrors = 0;
 
         function hash(text) {
             var h = 0;
@@ -78,47 +79,76 @@
             return h;
         }
 
-        function stationPlace(a) {
-            var c = TC[a.TEHC];
-            if (!c) return null;
-            var h = hash(a.SERV_ELEM || String(a.ID));
-            var angle = h % 360 * Math.PI / 180, dist = 0.08 + (h % 37) / 100;
-            return [c[1] + Math.sin(angle) * dist * 0.5, c[2] + Math.cos(angle) * dist];
+        function stationPlace(alarm) {
+            var city = TC[alarm.TEHC];
+            if (!city) return null;
+            var h = hash(alarm.SERV_ELEM || String(alarm.ID));
+            var angle = h % 360 * Math.PI / 180;
+            var dist = 0.05 + (h % 41) / 300;
+            return [city[1] + Math.sin(angle) * dist * 0.55, city[2] + Math.cos(angle) * dist];
         }
 
-        function drawBase() {
-            var s = '';
-            for (var lon = 58; lon <= 79; lon += 3) s += '<line class="grid" x1="' + x(lon) + '" y1="30" x2="' + x(lon) + '" y2="690"/>' +
-                '<text class="grid-t" x="' + (x(lon) + 3) + '" y="704">' + lon + '°</text>';
-            for (var lat = 55; lat <= 68; lat += 2) s += '<line class="grid" x1="40" y1="' + y(lat) + '" x2="960" y2="' + y(lat) + '"/>' +
-                '<text class="grid-t" x="6" y="' + (y(lat) + 4) + '">' + lat + '°</text>';
-            s += '<polyline class="river" points="' + OB.map(function (p) { return x(p[1]) + ',' + y(p[0]); }).join(' ') + '"/>';
-            s += '<text class="river-t" x="' + x(66.2) + '" y="' + y(64.6) + '">р. Обь</text>';
-            REGIONS.forEach(function (r) { s += '<text class="region" x="' + x(r[2]) + '" y="' + y(r[1]) + '">' + r[0] + '</text>'; });
-            Object.keys(TC).forEach(function (k) {
-                var c = TC[k];
-                s += '<g class="city" data-tc="' + k + '"><circle cx="' + x(c[2]) + '" cy="' + y(c[1]) + '" r="3"/>' +
-                    '<text x="' + (x(c[2]) + 6) + '" y="' + (y(c[1]) - 6) + '">' + c[0] + ' <tspan>' + k + '</tspan></text></g>';
+        function createMap() {
+            map = L.map('map', { zoomControl: true, attributionControl: true }).fitBounds(NETWORK);
+            var tiles = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                maxZoom: 17, attribution: '&copy; участники OpenStreetMap'
+            }).addTo(map);
+            tiles.on('tileerror', function () {
+                tileErrors++;
+                if (tileErrors > 3) {
+                    document.getElementById('offline').hidden = false;
+                    document.getElementById('map').classList.add('no-tiles');
+                }
             });
-            return s;
+            tiles.on('tileload', function () {
+                tileErrors = 0;
+                document.getElementById('offline').hidden = true;
+                document.getElementById('map').classList.remove('no-tiles');
+            });
+
+            L.polyline(OB, { color: '#7fb3d8', weight: 4, opacity: .8, interactive: false }).addTo(map);
+            Object.keys(TC).forEach(function (code) {
+                var city = TC[code];
+                L.marker([city[1], city[2]], {
+                    icon: L.divIcon({ className: 'tc-label', html: '<i></i>' + city[0] + ' <b>' + code + '</b>', iconSize: null })
+                }).addTo(map).on('click', function () { zoomTo(code); });
+            });
+            dotsLayer = L.layerGroup().addTo(map);
         }
 
-        function draw() {
-            var byStation = {};
+        function dotColor(list) {
+            var open = list.filter(function (a) { return a.IS_OPEN; });
+            if (open.some(function (a) { return a.KATEG === 1; })) return '#c3291c';
+            if (open.length) return '#e8891e';
+            return '#8f8c84';
+        }
+
+        function popupHtml(name, code, list) {
+            var rows = list.slice(0, 5).map(function (a) {
+                return '<tr><td>' + (a.IS_OPEN ? '<span class="nv-badge">НВ</span>' : '') + '</td><td><b>' + M.esc(a.ALARM_TYPE || '') + '</b> ' +
+                    M.esc(a.DESCR || '') + '<div class="muted">' + M.fmtDateTime(a.BEGIN_TIME) + ' · ' + M.esc(a.LENGHT || '') + '</div></td>' +
+                    '<td><a href="reports.html?view=' + a.ID + '">открыть</a></td></tr>';
+            }).join('');
+            return '<div class="map-popup"><b>' + M.esc(name) + '</b><div class="muted">ТЦ ' + M.esc(code) + ' · аварий: ' + list.length + '</div>' +
+                '<table>' + rows + '</table></div>';
+        }
+
+        function drawDots() {
+            dotsLayer.clearLayers();
+            var stations = {};
             alarms.forEach(function (a) {
                 var key = (a.SERV_ELEM || 'id' + a.ID) + '|' + a.TEHC;
-                if (!byStation[key]) byStation[key] = { list: [], place: stationPlace(a), name: a.SERV_ELEM || 'без адреса', tc: a.TEHC };
-                byStation[key].list.push(a);
+                if (!stations[key]) stations[key] = { name: a.SERV_ELEM || 'без адреса', code: a.TEHC, place: stationPlace(a), list: [] };
+                stations[key].list.push(a);
             });
-            points = Object.keys(byStation).map(function (k) { return byStation[k]; }).filter(function (p) { return p.place; });
-            var dots = points.map(function (p, i) {
-                var open = p.list.filter(function (a) { return a.IS_OPEN; });
-                var crit = open.some(function (a) { return a.KATEG === 1; });
-                var cls = crit ? 'd-crit' : open.length ? 'd-open' : 'd-closed';
-                var r = Math.min(4 + p.list.length * 1.5, 12);
-                return '<circle class="dot ' + cls + '" data-i="' + i + '" cx="' + x(p.place[1]) + '" cy="' + y(p.place[0]) + '" r="' + r + '"/>';
-            }).join('');
-            document.getElementById('map').innerHTML = drawBase() + dots;
+            Object.keys(stations).forEach(function (key) {
+                var st = stations[key];
+                if (!st.place) return;
+                L.circleMarker(st.place, {
+                    radius: Math.min(6 + st.list.length * 2, 16), color: '#fff', weight: 2,
+                    fillColor: dotColor(st.list), fillOpacity: .9
+                }).bindPopup(popupHtml(st.name, st.code, st.list), { maxWidth: 380 }).addTo(dotsLayer);
+            });
             drawTable();
         }
 
@@ -129,41 +159,33 @@
                 stat[a.TEHC].all++;
                 if (a.IS_OPEN) stat[a.TEHC].open++;
             });
-            var keys = Object.keys(TC).sort(function (a, b) {
-                var sa = stat[a] || { open: 0, all: 0 }, sb = stat[b] || { open: 0, all: 0 };
+            var empty = { open: 0, all: 0 };
+            var codes = Object.keys(TC).sort(function (a, b) {
+                var sa = stat[a] || empty, sb = stat[b] || empty;
                 return sb.open - sa.open || sb.all - sa.all;
             });
-            document.getElementById('tc-list').innerHTML = keys.map(function (k) {
-                var st = stat[k] || { open: 0, all: 0 };
-                return '<tr class="clickable" data-tc="' + k + '"><td><b>' + k + '</b></td><td>' + TC[k][0] + '</td>' +
+            document.getElementById('tc-list').innerHTML = codes.map(function (code) {
+                var st = stat[code] || empty;
+                return '<tr class="clickable" data-tc="' + code + '"><td><b>' + code + '</b></td><td>' + TC[code][0] + '</td>' +
                     '<td class="num' + (st.open ? ' text-red' : ' muted') + '">' + st.open + '</td><td class="num">' + st.all + '</td></tr>';
             }).join('');
         }
 
-        function zoomTo(tc) {
-            var c = TC[tc];
-            if (!c) return;
-            var w = 230, h = 165;
-            document.getElementById('map').setAttribute('viewBox', (x(c[2]) - w / 2) + ' ' + (y(c[1]) - h / 2) + ' ' + w + ' ' + h);
-            document.getElementById('map').classList.add('zoomed');
+        function zoomTo(code) {
+            var city = TC[code];
+            if (city) map.flyTo([city[1], city[2]], 10, { duration: 0.8 });
         }
 
-        function resetZoom() {
-            document.getElementById('map').setAttribute('viewBox', full);
-            document.getElementById('map').classList.remove('zoomed');
-        }
-
-        function findPlace(text) {
-            text = text.trim().toLowerCase();
+        function findPlace() {
+            var text = document.getElementById('find').value.trim().toLowerCase();
             if (!text) return;
-            var tc = Object.keys(TC).filter(function (k) {
-                return k.toLowerCase() === text || TC[k][0].toLowerCase().indexOf(text) === 0;
+            var code = Object.keys(TC).filter(function (c) {
+                return c.toLowerCase() === text || TC[c][0].toLowerCase().indexOf(text) === 0;
             })[0];
-            if (!tc) {
-                var p = points.filter(function (p) { return p.name.toLowerCase().indexOf(text) >= 0; })[0];
-                tc = p && p.tc;
-            }
-            if (tc) zoomTo(tc); else M.toast('Не найдено: ' + text, 'error');
+            if (code) { zoomTo(code); return; }
+            var found = alarms.filter(function (a) { return (a.SERV_ELEM || '').toLowerCase().indexOf(text) >= 0; })[0];
+            if (found && stationPlace(found)) { map.flyTo(stationPlace(found), 12, { duration: 0.8 }); return; }
+            M.toast('Ничего не найдено: ' + text, 'error');
         }
 
         function load(period) {
@@ -171,57 +193,39 @@
                 b.className = b.getAttribute('data-p') === period ? 'active' : '';
             });
             var q = 'limit=5000';
-            if (period === 'open') q += '&only_open=true';
-            else { var d = new Date(); d.setDate(d.getDate() - parseInt(period, 10) + 1); q += '&date_from=' + M.isoDate(d); }
+            if (period === 'open') {
+                q += '&only_open=true';
+            } else {
+                var d = new Date();
+                d.setDate(d.getDate() - parseInt(period, 10) + 1);
+                q += '&date_from=' + M.isoDate(d);
+            }
             M.api('GET', '/alarms?' + q).then(function (rows) {
                 alarms = rows;
                 var open = rows.filter(function (a) { return a.IS_OPEN; }).length;
-                document.getElementById('sub').textContent = 'Аварий на карте: ' + rows.length + ', не закрыто: ' + open + ' · работает без интернета';
-                draw();
+                document.getElementById('sub').textContent = 'Аварий на карте: ' + rows.length + ', не закрыто: ' + open;
+                drawDots();
             }).catch(function (e) { M.toast(e.message, 'error'); });
         }
 
         if (session) {
-            document.getElementById('places').innerHTML = Object.keys(TC).map(function (k) {
-                return '<option value="' + TC[k][0] + '">' + k + '</option>';
+            createMap();
+            document.getElementById('places').innerHTML = Object.keys(TC).map(function (c) {
+                return '<option value="' + TC[c][0] + '">' + c + '</option>';
             }).join('');
-            Array.prototype.forEach.call(document.querySelectorAll('#period button'), function (b) {
-                b.onclick = function () { load(b.getAttribute('data-p')); };
-            });
-            document.getElementById('find').onchange = function () { findPlace(this.value); };
-            document.getElementById('find').onkeydown = function (e) { if (e.key === 'Enter') findPlace(this.value); };
-            document.getElementById('reset').onclick = function () { document.getElementById('find').value = ''; resetZoom(); };
+            document.getElementById('find-btn').onclick = findPlace;
+            document.getElementById('find').onkeydown = function (e) { if (e.key === 'Enter') findPlace(); };
+            document.getElementById('reset').onclick = function () {
+                document.getElementById('find').value = '';
+                map.flyToBounds(NETWORK, { duration: 0.8 });
+            };
             document.getElementById('tc-list').onclick = function (e) {
                 var tr = e.target.closest('tr[data-tc]');
                 if (tr) zoomTo(tr.getAttribute('data-tc'));
             };
-
-            var svg = document.getElementById('map'), tip = document.getElementById('tip');
-            svg.onclick = function (e) {
-                var city = e.target.closest('.city');
-                if (city) { zoomTo(city.getAttribute('data-tc')); return; }
-                var i = e.target.getAttribute('data-i');
-                if (i !== null) {
-                    var last = points[i].list[0];
-                    location.href = 'reports.html?view=' + last.ID;
-                }
-            };
-            svg.onmousemove = function (e) {
-                var i = e.target.getAttribute('data-i');
-                if (i === null) { tip.hidden = true; return; }
-                var p = points[i];
-                tip.innerHTML = '<b>' + M.esc(p.name) + '</b><br>ТЦ ' + M.esc(p.tc) + ' · аварий: ' + p.list.length +
-                    p.list.slice(0, 4).map(function (a) {
-                        return '<div>' + (a.IS_OPEN ? '<span class="nv-badge">НВ</span> ' : '') + M.esc(a.ALARM_TYPE || '') + ' — ' +
-                            M.esc(a.DESCR || '') + '<span class="muted"> · ' + M.fmtDateTime(a.BEGIN_TIME) + '</span></div>';
-                    }).join('') + '<div class="muted">нажмите, чтобы открыть</div>';
-                var box = svg.parentNode.getBoundingClientRect();
-                tip.style.left = Math.min(e.clientX - box.left + 14, box.width - 340) + 'px';
-                tip.style.top = (e.clientY - box.top + 14) + 'px';
-                tip.hidden = false;
-            };
-            svg.onmouseleave = function () { tip.hidden = true; };
-
+            Array.prototype.forEach.call(document.querySelectorAll('#period button'), function (b) {
+                b.onclick = function () { load(b.getAttribute('data-p')); };
+            });
             load('open');
             setInterval(function () {
                 var active = document.querySelector('#period .active');
