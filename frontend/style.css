@@ -481,9 +481,10 @@ html.dark .help code, html.dark kbd { background: #2c2f35; border-color: #4a4e56
 html.dark select.invalid, html.dark input.invalid, html.dark textarea.invalid { background: #3a2222; }
 html.zoom-big .split { grid-template-columns: minmax(0, 1fr); }
 .kpi b { white-space: nowrap; }
-html.zoom-big .kpis { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-html.zoom-big .kpi b { font-size: 26px; }
+html.zoom-big .kpi { padding: 12px 14px; }
+html.zoom-big .kpi b { font-size: 22px; }
 .topbar .link-btn { white-space: nowrap; }
 html.zoom-big .f > span { font-size: 13px; }
 html.zoom-big .grid { grid-column-gap: 10px; }
 html.zoom-big .g-6 { grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr) repeat(4, minmax(0, 1fr)); }
+html.zoom-big .kpi span, html.zoom-big .kpi small { font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

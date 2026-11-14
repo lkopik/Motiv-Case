@@ -55,9 +55,9 @@ var AlarmForm = (function () {
 
         '<fieldset><legend>Время</legend><div class="grid g-6">' +
           '<div class="f c-2"><span><i class="n">11</i>Начало</span><div class="with-btn">' +
-            '<input name="BEGIN_TIME" type="datetime-local" required><button type="button" class="btn-mini" data-now="BEGIN_TIME">Сейчас</button></div></div>' +
+            '<input name="BEGIN_TIME" type="datetime-local" step="1" required><button type="button" class="btn-mini" data-now="BEGIN_TIME">Сейчас</button></div></div>' +
           '<div class="f c-2"><span><i class="n">12</i>Окончание</span><div class="with-btn">' +
-            '<input name="END_TIME" type="datetime-local"><button type="button" class="btn-mini" data-now="END_TIME">Сейчас</button></div>' +
+            '<input name="END_TIME" type="datetime-local" step="1"><button type="button" class="btn-mini" data-now="END_TIME">Сейчас</button></div>' +
             '<label class="check nv"><input type="checkbox" name="NV"> НВ (настоящее время)</label></div>' +
           '<label class="f"><span><i class="n">13</i>АКБ</span><input name="AKB" class="hms" placeholder="чч:мм:сс"></label>' +
           '<label class="f"><span><i class="n">14</i>ГУ</span><input name="DGU" class="hms" placeholder="чч:мм:сс"></label>' +
@@ -197,8 +197,8 @@ var AlarmForm = (function () {
                  'PROSTOY', 'ALARM_WHO', 'DESC_NOTICE'].forEach(function (f) { el(f).value = a[f] || ''; });
                 radio('KATEG', a.KATEG === undefined || a.KATEG === null ? '' : a.KATEG);
                 radio('NETW_TYPE', a.NETW_TYPE || '');
-                el('BEGIN_TIME').value = a.BEGIN_TIME ? a.BEGIN_TIME.slice(0, 16) : M.toInputValue(new Date());
-                el('END_TIME').value = a.END_TIME ? a.END_TIME.slice(0, 16) : '';
+                el('BEGIN_TIME').value = a.BEGIN_TIME ? a.BEGIN_TIME.slice(0, 19) : M.toInputValue(new Date());
+                el('END_TIME').value = a.END_TIME ? a.END_TIME.slice(0, 19) : '';
                 setSector(a.NUMB_RBS === 0);
                 if (a.NUMB_RBS) el('NUMB_RBS').value = a.NUMB_RBS;
                 setNv(!a.ID || !a.END_TIME);

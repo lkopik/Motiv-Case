@@ -117,7 +117,7 @@ var Motiv = (function () {
     }
     function toInputValue(date) {
         return date.getFullYear() + '-' + pad(date.getMonth() + 1) + '-' + pad(date.getDate()) +
-            'T' + pad(date.getHours()) + ':' + pad(date.getMinutes());
+            'T' + pad(date.getHours()) + ':' + pad(date.getMinutes()) + ':' + pad(date.getSeconds());
     }
     function isoDate(date) {
         return date.getFullYear() + '-' + pad(date.getMonth() + 1) + '-' + pad(date.getDate());
@@ -177,6 +177,9 @@ var Motiv = (function () {
             '<button class="link-btn" id="logout" title="Выйти">Выход</button></div>';
         document.body.insertBefore(header, document.body.firstChild);
         document.getElementById('logout').onclick = logout;
+        Array.prototype.forEach.call(document.querySelectorAll('.topbar button'), function (b) {
+            b.onmousedown = function (e) { e.preventDefault(); };
+        });
         var SCALES = [90, 100, 110, 125, 140];
         var scale = parseInt(localStorage.getItem('motiv_scale'), 10) || 100;
         var setScale = function (value) {
