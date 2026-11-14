@@ -1,4 +1,8 @@
 
+try {
+    if (localStorage.getItem('motiv_theme') === 'dark') document.documentElement.className += ' dark';
+} catch (e) {}
+
 var Motiv = (function () {
     var KEY = 'motiv_session';
 
@@ -174,9 +178,20 @@ var Motiv = (function () {
             '<span class="shift" id="shift"></span>' +
             '<span class="who" title="' + esc(s.role_name) + '">' + esc(name) + ' <i class="role role-' + esc(s.role) + '">' +
             esc(s.role_name) + '</i></span>' +
+            '<button class="link-btn" id="theme"></button>' +
             '<button class="link-btn" id="logout" title="Выйти">Выход</button></div>';
         document.body.insertBefore(header, document.body.firstChild);
         document.getElementById('logout').onclick = logout;
+        var themeBtn = document.getElementById('theme');
+        var setThemeText = function () {
+            themeBtn.textContent = document.documentElement.classList.contains('dark') ? 'Светлая тема' : 'Тёмная тема';
+        };
+        setThemeText();
+        themeBtn.onclick = function () {
+            var dark = document.documentElement.classList.toggle('dark');
+            try { localStorage.setItem('motiv_theme', dark ? 'dark' : 'light'); } catch (e) {}
+            setThemeText();
+        };
 
         var bar = document.createElement('footer');
         bar.className = 'statusbar';

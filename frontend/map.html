@@ -6,9 +6,9 @@
     <title>Карта — Мотив</title>
     <link rel="icon" href="logo.png" type="image/png">
     <link rel="stylesheet" href="vendor/leaflet/leaflet.css">
-    <link rel="stylesheet" href="style.css?v=13">
+    <link rel="stylesheet" href="style.css?v=14">
     <script src="vendor/leaflet/leaflet.js"></script>
-    <script src="app.js?v=13"></script>
+    <script src="app.js?v=14"></script>
 </head>
 <body class="app">
     <main class="page">
@@ -90,6 +90,9 @@
 
         function createMap() {
             map = L.map('map', { zoomControl: true, attributionControl: true }).fitBounds(NETWORK);
+            map.attributionControl.setPrefix(false);
+            map.on('zoomend', showLabels);
+            showLabels();
             var tiles = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 maxZoom: 17, attribution: '&copy; участники OpenStreetMap'
             }).addTo(map);
@@ -110,10 +113,15 @@
             Object.keys(TC).forEach(function (code) {
                 var city = TC[code];
                 L.marker([city[1], city[2]], {
-                    icon: L.divIcon({ className: 'tc-label', html: '<i></i>' + city[0] + ' <b>' + code + '</b>', iconSize: null })
+                    icon: L.divIcon({ className: 'tc-label', html: '<i></i><span>' + city[0] + ' </span><b>' + code + '</b>', iconSize: null })
                 }).addTo(map).on('click', function () { zoomTo(code); });
             });
             dotsLayer = L.layerGroup().addTo(map);
+        }
+
+        function showLabels() {
+            var box = document.getElementById('map');
+            box.classList.toggle('labels-short', map.getZoom() < 7);
         }
 
         function dotColor(list) {

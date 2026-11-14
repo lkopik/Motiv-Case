@@ -412,3 +412,51 @@ input, select, textarea, .btn, button { font-weight: 600; }
 .map-popup td + td { border-left: none; }
 .map-popup .muted { font-size: 12px; }
 .leaflet-popup-content { margin: 10px 12px; }
+
+#map.labels-short .tc-label span { display: none; }
+
+html.dark {
+    color-scheme: dark;
+    --bg: #17181a;
+    --surface: #222326;
+    --surface-2: #2a2b2f;
+    --line: #36373c;
+    --line-strong: #4a4b51;
+    --ink: #e8e6e1;
+    --ink-2: #c9c6bf;
+    --muted: #9b988f;
+    --orange-ink: #ff8c42;
+    --orange-tint: #3a2a1e;
+    --graphite: #111214;
+    --graphite-2: #2a2b2f;
+    --red: #ff6b5e;
+    --red-tint: #3a2220;
+    --green: #6cc47c;
+    --amber: #e0a040;
+}
+html.dark .panel { border-color: var(--line); }
+html.dark .panel-head, html.dark th { background: linear-gradient(#2a2b2f, #25262a); border-color: var(--line); }
+html.dark tbody tr:nth-child(even) td { background: #26272a; }
+html.dark tbody tr:hover td { background: #33281f; }
+html.dark td + td { border-left-color: #2c2d31; }
+html.dark .alarm-form legend { background: #2a2b2f; border-left-color: #55565c; }
+html.dark .f > span .n, html.dark .calc > span .n { background: #2f3034; border-color: #44454b; color: #a9a69e; }
+html.dark .chips input:checked + span, html.dark .quick button.active, html.dark .segmented button.active {
+    background: var(--orange); border-color: var(--orange); color: #fff; }
+html.dark .days .d i { background: #8f8c84; }
+html.dark .outage { background: #3a2220; color: #ffb4ab; }
+html.dark .map-offline { background: #3a2e1a; color: #f0c48a; border-color: #5a4520; }
+html.dark .login-page { background: #111214; }
+html.dark .statusbar { background: #111214; }
+html.dark input:-webkit-autofill { -webkit-box-shadow: 0 0 0 40px #222326 inset; -webkit-text-fill-color: #e8e6e1; }
+html.dark ::selection { background: #5a3a20; color: #fff; }
+html.dark .q { border-color: #55565c; color: #a9a69e; }
+html.dark .flash td { animation-name: flash-dark; }
+@keyframes flash-dark { 0%, 25% { background: #4a2e18; } 100% { background: transparent; } }
+html.dark #map { background: #1d1f1c; }
+html.dark .leaflet-tile-pane { filter: invert(1) hue-rotate(180deg) brightness(.85) contrast(.9); }
+html.dark .leaflet-popup-content-wrapper, html.dark .leaflet-popup-tip { background: #222326; color: var(--ink); }
+html.dark .leaflet-bar a, html.dark .leaflet-control-attribution { background: #222326 !important; color: #c9c6bf !important; }
+html.dark .leaflet-control-attribution a { color: #ff8c42; }
+html.dark .tc-label { color: #f2f1ec; text-shadow: 0 0 3px #000, 0 0 3px #000, 0 0 3px #000; }
+html.dark .tc-label i { background: #f2f1ec; border-color: #111; }
