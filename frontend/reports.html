@@ -5,9 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Архив — Мотив</title>
     <link rel="icon" href="logo.png" type="image/png">
-    <link rel="stylesheet" href="style.css?v=30">
-    <script src="app.js?v=30"></script>
-    <script src="form.js?v=30"></script>
+    <link rel="stylesheet" href="style.css?v=31">
+    <script src="app.js?v=31"></script>
+    <script src="form.js?v=31"></script>
 </head>
 <body class="app">
     <main class="page">
@@ -151,7 +151,8 @@
             top.firstChild.style.width = wrap.scrollWidth + 'px';
             top.style.display = wrap.scrollWidth > wrap.clientWidth ? 'block' : 'none';
             var bar = document.querySelector('.topbar');
-            if (bar) top.style.top = bar.offsetHeight + 'px';
+            var zoom = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--zoom')) || 1;
+            if (bar) top.style.top = bar.offsetHeight / zoom + 'px';
         }
 
         function load() {
