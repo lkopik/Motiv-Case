@@ -165,6 +165,13 @@ async def check_alarm(alarm: DataUpload):
         if isinstance(value, str):
             data[key] = value.strip() or None
 
+    if not data["TEHC"]:
+        raise HTTPException(422, "Выберите ТЦ")
+    if not data["SERV_ELEM"]:
+        raise HTTPException(422, "Укажите сетевой элемент")
+    if data["NUMB_RBS"] is not None and data["NUMB_RBS"] > 10000:
+        raise HTTPException(422, "Количество БС — до 10000")
+
     lists = await db.get_dicts()
     for col, kind, name in [("NAPR", "napr", "Направление"), ("TEHC", "tehc", "ТЦ"),
                             ("NETW_TYPE", "netw_type", "Тип сети"), ("ALARM_TYPE", "alarm_type", "Тип")]:
@@ -179,6 +186,9 @@ async def check_alarm(alarm: DataUpload):
 
     if data["END_TIME"] and data["END_TIME"] < data["BEGIN_TIME"]:
         raise HTTPException(422, "Окончание раньше начала")
+    for col, name in [("BEGIN_TIME", "Начало"), ("END_TIME", "Окончание")]:
+        if data[col] and await db.is_future(data[col]):
+            raise HTTPException(422, f"{name} аварии не может быть в будущем")
     if not data["END_TIME"]:
         data["END_TIME"] = db.NV
     return data

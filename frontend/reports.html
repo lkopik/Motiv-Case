@@ -5,9 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Архив — Мотив</title>
     <link rel="icon" href="logo.png" type="image/png">
-    <link rel="stylesheet" href="style.css?v=20">
-    <script src="app.js?v=20"></script>
-    <script src="form.js?v=20"></script>
+    <link rel="stylesheet" href="style.css?v=36">
+    <script src="app.js?v=36"></script>
+    <script src="form.js?v=36"></script>
 </head>
 <body class="app">
     <main class="page">
@@ -151,7 +151,8 @@
             top.firstChild.style.width = wrap.scrollWidth + 'px';
             top.style.display = wrap.scrollWidth > wrap.clientWidth ? 'block' : 'none';
             var bar = document.querySelector('.topbar');
-            if (bar) top.style.top = bar.offsetHeight + 'px';
+            var zoom = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--zoom')) || 1;
+            if (bar) top.style.top = bar.offsetHeight / zoom + 'px';
         }
 
         function load() {
@@ -238,8 +239,15 @@
                 };
             });
             var topBar = document.getElementById('top-scroll'), wrap = document.getElementById('table-wrap');
-            topBar.onscroll = function () { wrap.scrollLeft = topBar.scrollLeft; };
-            wrap.onscroll = function () { topBar.scrollLeft = wrap.scrollLeft; };
+            var leader = null;
+            topBar.onmouseenter = topBar.ontouchstart = function () { leader = topBar; };
+            wrap.onmouseenter = wrap.ontouchstart = wrap.onwheel = function () { leader = wrap; };
+            topBar.onscroll = function () {
+                if (leader !== wrap && Math.abs(wrap.scrollLeft - topBar.scrollLeft) > 1) wrap.scrollLeft = topBar.scrollLeft;
+            };
+            wrap.onscroll = function () {
+                if (leader !== topBar && Math.abs(topBar.scrollLeft - wrap.scrollLeft) > 1) topBar.scrollLeft = wrap.scrollLeft;
+            };
             window.addEventListener('resize', syncScroll);
             setPeriod('week');
             var m = /[?&]view=(\d+)/.exec(location.search);
