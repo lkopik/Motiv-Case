@@ -488,3 +488,6 @@ html.zoom-big .f > span { font-size: 13px; }
 html.zoom-big .grid { grid-column-gap: 10px; }
 html.zoom-big .g-6 { grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr) repeat(4, minmax(0, 1fr)); }
 html.zoom-big .kpi span, html.zoom-big .kpi small { font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bar-row .sub { white-space: nowrap; }
+html.zoom-big .bar-row { grid-template-columns: 64px minmax(30px, 1fr) 40px auto; grid-gap: 8px; }
+html.zoom-big .grid-2:not(#kinds) { grid-template-columns: repeat(2, minmax(0, 1fr)); }
